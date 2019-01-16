@@ -1,193 +1,17 @@
 # Total R Code for GLBRC 
 ### Start Common
-# ### DIRECTIONS, SET WORKING DIRECTORY TO "phyllosphere/Analyses/16S"
-# ### Before working on Analysis, run the entire Common block of Code (all the way until "### End Common")
-# library(dplyr)
-# library(tidyr)
-# library(reshape2)
-# library(RSQLite)
-# library(stringr)
-# 
-# # Read in OTU table
-# otu <- read.table("otu/otu.tsv",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
-# 
-# #Preping the environmental metadata
-# glbrc <- dbConnect(SQLite(), dbname="../Data/GLBRC_bioenergy_db.db" )
-# 
-# #Content of the DB
-# dbListTables(glbrc)
-# 
-# #Content of selected tables in the DB
-# dbListFields(glbrc, 'plant')
-# dbListFields(glbrc, 'sequencing')
-# dbListFields(glbrc, 'soil')
-# dbListFields(glbrc, 'nucleic_acids')
-# 
-# #get tables into R
-# glbrc_NA <- dbGetQuery(glbrc, "select * from nucleic_acids") 
-# glbrc_soil <- dbGetQuery(glbrc, 'select * from soil')
-# glbrc_plant <- dbGetQuery(glbrc, 'select * from plant')
-# glbrc_plot <- dbGetQuery(glbrc, 'select * from plot')
-# glbrc_sampling <- dbGetQuery(glbrc, 'select * from sampling')
-# glbrc_sequncing <- dbGetQuery(glbrc, 'select * from sequencing')
-# 
-# #joining tables to create complete map file
-# metadata <- full_join(glbrc_plot, glbrc_sampling, by='plotID')
-# metadata <- full_join(metadata, glbrc_soil, by='sampleID')
-# metadata <- full_join(metadata, glbrc_plant, by='sampleID')
-# metadata <- full_join(metadata, glbrc_NA, by='sampleID')
-# metadata <- full_join(metadata, glbrc_sequncing, by='nucleic_acid_name')
-# 
-# map <- metadata
-# dim(map)
-# 
-# map_16 <- subset(map, map$primers == 'EMP V4')
-# dim(map_16)
-# head(map_16)
-# map_16$help_name = as.character(lapply(strsplit(as.character(map_16$nucleic_acid_name), split="D"), "[", 1))
-# unique(map_16$help_name)
-# 
-# #finding duplicates
-# n_occur <- data.frame(table(map_16$help_name))
-# n_occur[n_occur$Freq > 1,]
-# duplicate_df <- map_16[map_16$help_name %in% n_occur$Var1[n_occur$Freq > 1],]
-# list_dupli <- duplicate_df$sequence_name #list of duplicate samples
-# 
-# D1 <- duplicate_df[grep('D1', duplicate_df$sequence_name),]
-# D1$removing <- 'remove'
-# dim(D1)
-# 
-# map_full <- full_join(map, D1) 
-# map_full$removing
-# 
-# #creating numeric time column
-# map_full$sampling_date <- paste0(map_full$month,'-', map_full$day,'-',map_full$year) 
-# map_full$sampling_date <- as.POSIXct(map_full$sampling_date, format='%m-%d-%Y')
-# time <- as.POSIXct(map_full$sampling_date, format='%m-%d-%Y')
-# time_numeric <- as.numeric(time)
-# map_time <- cbind(map_full, time_numeric)
-# 
-# #adding weather data
-# weather <- read.csv('../../Data/kbs_weather_09212017.csv', encoding = 'UTF-8')
-# dim(weather)
-# head(weather)
-# weather$sampling_date <- as.POSIXct(weather$date, format='%d.%m.%y')
-# 
-# sub_weather <- weather[weather$sampling_date %in% map_time$sampling_date,] #subsetting weather file for sample dates
-# 
-# #merging dataframes - map file and weather
-# map_complete <- full_join(map_time, weather)
-# 
-# head(map_complete)
-# 
-# 
-# write.csv(map_complete, '../map_file.csv')
-# 
-# #Subset to 16S Samples
-# map_16S <- subset(map_complete, map_complete$primers=="EMP V4")
-# # Get the name of the samples we have data for
-# 
-# samples <- colnames(otu)
-# # Remove the taxonomy item
-# samples <- samples[1:294]
-# # put taxonomy into its own variable
-# taxonomy <- otu[,295]
-# # subset the map to include only those samples we have sequence data
-# map_small <- map_16S[map_16S$sequence_name %in% samples,]
-# # Remove any duplicates that we don't want to use
-# map_small <- map_small[map_small$exclude_from_analysis=="N",]
-# # Remove rows that have N/A for the sequence name
-# map_small<- map_small[complete.cases(map_small$sequence_name),]
-# 
-# # Subset the samples to those we want to analyse (IE remove the duplicates)
-# samples <- samples[samples %in% map_small$sequence_name]
-# #Subset the OTU table to only the samples we want to analyze(IE remove the duplicates)
-# otu_sub <- otu[,colnames(otu) %in% samples]
-# # Order the samples
-# otu_sub <- otu_sub[,order(colnames(otu_sub))]
-# # Order the samples of the map the same way
-# map_small <- map_small[order(map_small$sequence_name),]
-# # Check to make sure they all match with each other
-# map_small$sequence_name==colnames(otu_sub)
-# map_small[map_small$month==5,]
-# # Map file that has duplicates of samples removed
-# map_16S <- map_small
-# # OTU table that removes duplicates of single samples
-# otu <- otu_sub
-# dim(otu)
-# 
-# blast_results_cyano <- read.table('cyano_blast_output.txt', sep='\t')
-# plant_otus <- blast_results_cyano %>% 
-#   select(V1, V8) %>%
-#   filter(V8 == 'Eukaryota') %>%
-#   group_by(V1) %>%
-#   summarise(count=length(V1))
-# 
-# otu <- otu[!(rownames(otu) %in% as.character(plant_otus$V1)),] #removing 20 OTUs that are plants
-# 
-# taxonomy_full <- taxonomy
-# taxonomy <- taxonomy[rowSums(otu_sub)>0]
-# otu <- otu[rowSums(otu)>0,]
-# otu_soil <- otu[,map_16S$source=="soil"]
-# library(vegan)
-# set.seed(13)
-# otu_rare <- t(rrarefy(t(otu), min(colSums(otu))))
-# otu_soil_rare <- t(rrarefy(t(otu_soil), min(colSums(otu_soil))))
-# 
-# ### Multiplot code taken from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
- multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-   library(grid)
-   
-   # Make a list from the ... arguments and plotlist
-   plots <- c(list(...), plotlist)
-   
-   numPlots = length(plots)
-   
-   # If layout is NULL, then use 'cols' to determine layout
-   if (is.null(layout)) {
-     # Make the panel
-     # ncol: Number of columns of plots
-     # nrow: Number of rows needed, calculated from # of cols
-     layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                      ncol = cols, nrow = ceiling(numPlots/cols))
-   }
-   
-   if (numPlots==1) {
-     print(plots[[1]])
-     
-   } else {
-     # Set up the page
-     grid.newpage()
-     pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-     
-     # Make each plot, in the correct location
-     for (i in 1:numPlots) {
-       # Get the i,j matrix positions of the regions that contain this subplot
-       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-       
-       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                       layout.pos.col = matchidx$col))
-     }
-   }
- }
- 
-
-# Total R Code for GLBRC 
-### Start Common
-### DIRECTIONS, SET WORKING DIRECTORY TO "phyllosphere/Analyses/16S"
+### DIRECTIONS, SET WORKING DIRECTORY TO "PAPER_GradySorensenStopnisek_InPrep/R"
 ### Before working on Analysis, run the entire Common block of Code (all the way until "### End Common")
 library(dplyr)
 library(tidyr)
 library(reshape2)
 library(RSQLite)
 library(stringr)
-
-#setwd('/Users/shadelab/Documents/git/phyllosphere/Analyses/16S/')
 # Read in OTU table
-otu <- read.table("otu/table_combined_merged_trimmed_otus.txt",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
+otu <- read.table("InputFiles/table_combined_merged_trimmed_otus.txt",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
 
 #Preping the environmental metadata
-glbrc <- dbConnect(SQLite(), dbname="../../data/GLBRC_bioenergy_db.db" )
+glbrc <- dbConnect(SQLite(), dbname="InputFiles/GLBRC_bioenergy_db.db" )
 
 #Content of the DB
 dbListTables(glbrc)
@@ -245,7 +69,7 @@ time_numeric <- as.numeric(time)
 map_time <- cbind(map_full, time_numeric)
 
 #adding weather data
-weather <- read.csv('../../Data/kbs_weather_09212017.csv', encoding = 'UTF-8', na.strings= c("NA", " ", ""))
+weather <- read.csv('InputFiles/kbs_weather_09212017.csv', encoding = 'UTF-8', na.strings= c("NA", " ", ""))
 dim(weather)
 head(weather)
 weather$sampling_date <- as.POSIXct(weather$date, format='%d.%m.%y')
@@ -266,7 +90,7 @@ map_small <- map_16S[map_16S$exclude_from_analysis=="N",]
 
 samples <- colnames(otu)
 # put taxonomy into its own variable
-taxonomy <- read.csv('otu/taxonomy_combined_merged_trimmed_otus.csv', header = T, row.names = 1, na.strings= c("NA", " ", ""))
+taxonomy <- read.csv('InputFiles/taxonomy_combined_merged_trimmed_otus.csv', header = T, row.names = 1, na.strings= c("NA", " ", ""))
 # subset the map to include only those samples we have sequence data
 map_small <- map_small[map_small$sequence_name %in% samples,]
 
@@ -289,31 +113,7 @@ colnames(otu_sub) == map_small$sequence_name
 map_16S <- map_small
 # OTU table that removes duplicates of single samples
 otu <- otu_sub
-
-#Checking Cyanobacterial annotations for Eukaryota presence
-#****using otu table generated before
-#######################################
-#cyanobacteria <- taxonomy[grep("Cyanobacteria", taxonomy$Phylum),]
-
-# cyanobacteria_last <- apply(cyanobacteria, 1, lastValue)
-# cyanobacteria$last_taxon <- cyanobacteria_last
-# dubios_cyano <- cyanobacteria[grep("p:Cyanobacteria", cyanobacteria$last_taxon),]
-# cyano_otu <- dubios_cyano$otu
-# write.csv(cyano_otu, 'cyano_otus.txt')
-# 
-# blast_results_cyano <- read.table('cyano_blast_output.txt', sep='\t')
-# plant_otus <- blast_results_cyano %>% 
-#   select(V1, V8) %>%
-#   filter(V8 == 'Eukaryota') %>%
-#   group_by(V1)
-#***from here on we use updated otu excluding 20 OTUs that have been previously annotated as cyanobacteria instead of plants
-
-# blast_results_cyano <- read.table('cyano_blast_output.txt', sep='\t')
-# plant_otus <- blast_results_cyano %>% 
-#   select(V1, V8) %>%
-#   filter(V8 == 'Eukaryota') %>%
-#   group_by(V1) 
-
+otu_CM <- otu
 #removing Eukaryota from the OTU table
 tax_short <- taxonomy[!grepl("Mitochondria", taxonomy$Family),]
 tax_short <- tax_short[!grepl("Chloroplast", tax_short$Class),]
@@ -327,11 +127,51 @@ otu_soil <- otu[,map_16S$source=="soil"]
 
 library(vegan)
 set.seed(13)
-otu_rare <- t(rrarefy(t(otu), min(colSums(otu))))
+otu_rare <- t(rrarefy(t(otu), 1000))
 otu_soil_rare <- t(rrarefy(t(otu_soil), min(colSums(otu_soil))))
+otu_rare <- otu_rare[,colSums(otu_rare)>999]
+map_16S <- map_16S[map_16S$sequence_name%in%colnames(otu_rare),]
 
 rarecurve(t(otu_rare), step=20, sample = min(colSums(otu_rare)), label = FALSE)
 
+otu_rare <- otu_rare[,colSums(otu_rare)>999]
+
+# ### Multiplot code taken from http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
 
 
 ### End Common
@@ -411,7 +251,7 @@ ggplot(weather[weather$Year == 2016 & weather$sampling_date>'2016-04-01 EDT' & w
   geom_point(aes(y=Air_temp_mean), colour='red', size=.8) +
   geom_point() +
   labs(y='Precipitation (mm) - black;\nMean temperature (°C)- red;\nRelative humidity (%) - blue', x='Date')
-ggsave('~/Dropbox/GLBRC_16S/Supplemental/weather_report.eps', height=4, width=5)
+ggsave('Figures/weather_report.eps', height=4, width=5)
 
 #Contextual data analysis
 treat_colors <- rep("green", length(map_16S))
@@ -672,7 +512,7 @@ FigA<- ggplot(data=swit_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   scale_y_continuous(breaks=seq(0,1,.2)) +
   xlim(-4,-0.5) +
   guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = '~/Dropbox/GLBRC_16S/Supplemental/switchgrass_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
+ggsave(filename = 'Figures/switchgrass_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
 
 FigB <- ggplot(data=swit17_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   theme_bw()+
@@ -688,7 +528,7 @@ FigB <- ggplot(data=swit17_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   scale_y_continuous(breaks=seq(0,1,.2)) +
   #scale_x_continuous(breaks=seq(-4,0,1)) +
   guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = '~/Dropbox/GLBRC_16S/Supplemental/switchgrass_occ_abund_2017.pdf', device = 'pdf', width = 6.5, height = 4)
+ggsave(filename = 'Figures/switchgrass_occ_abund_2017.pdf', device = 'pdf', width = 6.5, height = 4)
 
 FigC <- ggplot(data=misc_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   theme_bw()+
@@ -703,7 +543,7 @@ FigC <- ggplot(data=misc_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   scale_y_continuous(breaks=seq(0,1,.2)) +
   xlim(-4,-0.5) +
   guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = '~/Dropbox/GLBRC_16S/Supplemental/miscanthus_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
+ggsave(filename = 'Figures/miscanthus_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
 
 ###Venn diagram for comparing the datasets
 install.packages('VennDiagram')
@@ -1005,7 +845,7 @@ plot6 <- plot6 + theme(legend.position="none")
 
 library(egg)
 setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/Figure3B-2_v2.eps', width = 16, height = 9)
+postscript('Figures/Figure3B-2_v2.eps', width = 16, height = 9)
 grid.draw(ggarrange(plot3,
                     plot1,
                     plot5,
@@ -1157,7 +997,7 @@ install.packages("ggpubr")
 library(ggpubr)
 
 setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/sphingo_dynamics.eps', width = 6, height = 5)
+postscript('Figures/sphingo_dynamics.eps', width = 6, height = 5)
 sphingo
 dev.off()
 
@@ -1202,7 +1042,7 @@ switch_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% swit_occ_abun$otu
           legend.position = 'bottom'))
 
 setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/switchgrass_unique_dynamics.eps', height = 9, width = 12)
+postscript('Figures/switchgrass_unique_dynamics.eps', height = 9, width = 12)
 switch_unique
 dev.off()
 
@@ -1276,14 +1116,14 @@ LSA_switch17_data <- LSA_switch17_data[,switch17_timed_samples]
 # nrow(LSA_switch17_data)
 
 #write tables for the eLSA analysis
-write.table(LSA_switch_data, '../../eLSA/LSAswitch16_input.txt', sep='\t')
-write.table(LSA_misc_data, '../../eLSA/LSAmisc16_input.txt', sep='\t')
-write.table(LSA_switch17_data, '../../eLSA/LSAswitch17_input.txt', sep='\t')
+write.table(LSA_switch_data, 'InputFiles/LSAswitch16_input.txt', sep='\t')
+write.table(LSA_misc_data, 'InputFiles/LSAmisc16_input.txt', sep='\t')
+write.table(LSA_switch17_data, 'InputFiles/LSAswitch17_input.txt', sep='\t')
 #######
 #Import eLSA output tables for plotting 
-s16.ELSA <- read.table('../../eLSA/LSAswitch16_output.txt', header=T, sep='\t')
-m.ELSA <- read.table('../../eLSA/LSAmisc16_output.txt', header=T, sep='\t')
-s17.ELSA <- read.table('../../eLSA/LSAswitch17_output.txt', header=T, sep='\t')
+s16.ELSA <- read.table('InputFiles/LSAswitch16_output.txt', header=T, sep='\t')
+m.ELSA <- read.table('InputFiles/LSAmisc16_output.txt', header=T, sep='\t')
+s17.ELSA <- read.table('InputFiles/LSAswitch17_output.txt', header=T, sep='\t')
 # 
 # swit16_plot_connection <- s16.ELSA %>% 
 #   filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
@@ -1458,7 +1298,7 @@ antigroup2 <- ggplot(swit_only_subset,
   guides(fill = guide_legend(ncol = 2, title=NULL))
 
 setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/eLSA_OTU_dynamics_group4.eps', width = 8, height = 6)
+postscript('Figures/eLSA_OTU_dynamics_group4.eps', width = 8, height = 6)
 swit_LSA_4
 dev.off()
 
@@ -1483,7 +1323,7 @@ antigroup <- ggplot(misc_only_subset,
   guides(fill = guide_legend(ncol = 2, title=NULL))
 
 setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/eLSA_OTU_dynamics_antigroup1_misc.eps', width = 5, height = 5)
+postscript('Figures/eLSA_OTU_dynamics_antigroup1_misc.eps', width = 5, height = 5)
 antigroup_1_misc
 dev.off()
 
@@ -1583,7 +1423,7 @@ ggplot(combined_phyllo_uniqes, aes(x=as.factor(sampling_date), y=n_otu)) +
   theme(axis.text.x = element_text(angle = 45, hjust=1),
         plot.title = element_text(hjust = 0.5))+
   labs(x='Date', y='Number of OTUs')
-ggsave('Dropbox/GLBRC_16S/Supplemental/FigureS5.eps', height=4.5, width=7)
+ggsave('Figures/FigureS5.eps', height=4.5, width=7)
 
 #overview of the unique taxa - taxonomy
 unique_tax <- combined_phyllo_uniqes %>%
@@ -1591,47 +1431,10 @@ unique_tax <- combined_phyllo_uniqes %>%
   summarise(n=sum(n_otu)) %>%
   arrange(desc(n))
 
-write.table(unique_tax, 'Dropbox/GLBRC_16S/Supplemental/TableS1.txt', sep = '\t')
+write.table(unique_tax, 'Figures/TableS1.txt', sep = '\t')
 
 
 ### End Nejc Analysis
-
-##########################################
-######   Start Keara Analysis    #########
-##########################################
-
-##  Alpha diversity analysis 
-
-otu_rare_PA <- 1*(otu_rare>0)
-#take rarified OTU table and convert to presence absence 
-#true = 1, false = 0s
-# colSums(otu_rare_PA) = number OTUs present in each sample
-
-
-# install bioconductor 
-# source("https://bioconductor.org/biocLite.R")
-# biocLite("limma")
-
-# Venn Analysis
-library("limma")
-#make subset OTU tables
-plant_otu <- otu[,map_16S$source=="phyllosphere"] #subset otu table - all the rows, only columns where the 'source' column in the map_16s file = phyllosphere'
-soil_otu <- otu[,map_16S$source=="soil"]
-
-# make presence absence list from soil and plant into 1 & 0
-soil_venn <- 1*(rowSums(soil_otu)>0)
-plant_venn <- 1*(rowSums(plant_otu)>0)
-
-# combine vectors into a matrix cbind = column bind (r bind = row bind)
-venndata <- cbind(soil_venn,plant_venn)
-colnames(venndata) <- c("Soil", "Phyllosphere")
-v=vennCounts(venndata)
-v2=round(v[,"Counts"]/sum(v[,"Counts"]),2)
-vennDiagram(v)
-
-
-### End Keara Analysis
-
 
 
 ##################################
@@ -1655,6 +1458,11 @@ otu_rare.phyllo.PA <- otu_rare.PA[,map_16S$source=="phyllosphere"]
 
 sum(rowSums(otu_rare.phyllo.PA)>0)
 
+
+### Settin up Contextual Data Maps
+map.2017 <- map_16S[map_16S$year=="2017",]
+map.2016 <- map_16S[map_16S$year=="2016",]
+
 map.soil <- map_16S[map_16S$source=="soil",]
 map.soil.2016 <- map_16S[map_16S$source=="soil"&map_16S$year==2016,]
 map.soil.2017 <- map_16S[map_16S$source=="soil"&map_16S$year==2017,]
@@ -1662,14 +1470,6 @@ map.soil.2017 <- map_16S[map_16S$source=="soil"&map_16S$year==2017,]
 map.plant <- map_16S[map_16S$source=="phyllosphere",]
 map.plant.2016 <- map.plant[map.plant$year==2016,]
 map.plant.2017 <- map.plant[map.plant$year==2017,]
-
-otu_soil_rare.2016 <- otu_soil_rare[,map.soil$year==2016]
-otu_soil_rare.2017 <- otu_soil_rare[,map.soil$year==2017]
-
-
-ss <- specnumber(otu_soil_rare, MARGIN=2)
-ss.2016 <- specnumber(otu_soil_rare.2016, MARGIN=2) 
-ss.2017 <- specnumber(otu_soil_rare.2017, MARGIN=2)
 
 map.div <- map_16S
 map.div$Richness <- s
@@ -1679,46 +1479,13 @@ map.div.plant <- map.div[map.div$source=="phyllosphere",]
 map.div.mis <- map.div.plant[map.div.plant$plant=="miscanthus",]
 map.div.swg <- map.div.plant[map.div.plant$plant=="switchgrass",]
 
-cor.test(map.div.swg$time_numeric, map.div.swg$Richness)
-cor.test(map.div.swg$time_numeric, map.div.swg$Shannon)
-cor.test(map.div.swg$time_numeric, map.div.swg$Pielou)
-
-cor.test(map.div.mis$time_numeric, map.div.mis$Richness)
-cor.test(map.div.mis$time_numeric, map.div.mis$Shannon)
-cor.test(map.div.mis$time_numeric, map.div.mis$Pielou)
-
 map.alpha <- melt(map.div, id.vars=c("sequence_name","treatment", "source", "plant", "time_numeric", "sampling_Rdate","year"), measure.vars=c("Richness", "Shannon", "Pielou"))
 
 map.alpha.plant <- map.alpha[map.alpha$source=="phyllosphere",]
-  
+
 map.alpha.plant.2016 <- map.alpha[map.alpha$source=="phyllosphere"&map.alpha$year==2016,]
 
 map.alpha.plant.2017 <- map.alpha[map.alpha$source=="phyllosphere"&map.alpha$year==2017,]
-
-
-plant_rare_otu <- otu_rare[,map_16S$source=="phyllosphere"]
-plant_rare_otu.2016 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2016]
-plant_rare_otu.2017 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2017]
-soil_rare_otu.2016 <- otu_rare[,map_16S$source=="soil"&map_16S$year==2016]
-
-plant_rare_otu.2016.coretaxa <- plant_rare_otu.2016[core_taxa.df$x,]
-plant_rare_otu.2016.coretaxa.2016 <- plant_rare_otu.2016[core_taxa_2016.df,]
-plant_rare_otu.2016.coretaxa.rel <- decostand(plant_rare_otu.2016.coretaxa, MARGIN = 2, method = "total")
-plant_rare_otu.2016.coretaxa.2016.rel <- decostand(plant_rare_otu.2016.coretaxa.2016, MARGIN=2, method="total")
-
-
-plant_rare_otu.2016.coretaxa.2016.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.2016), method="bray")
-
-plant_rare_otu.2016.coretaxa.rel.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.rel), method="bray")
-
-plant_rare_otu.2016.coretaxa.2016.rel.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.2016.rel), method="bray")
-
-
-otu_rare.2017 <- otu_rare[,map_16S$year=="2017"]
-map.2017 <- map_16S[map_16S$year=="2017",]
-map.2016 <- map_16S[map_16S$year=="2016",]
-colnames(otu_rare.2017) == map.2017$sequence_name
-
 
 map.div.soil.2016 <- map.soil.2016
 map.div.soil.2016$Richness <- ss.2016
@@ -1735,6 +1502,47 @@ map.soil.misc <- map.soil[map.soil$plant=="miscanthus",]
 map.soil.switch.2016 <- map.soil[map.soil$plant=="switchgrass"&map.soil$year==2016,]
 map.soil.switch.2017 <- map.soil[map.soil$plant=="switchgrass"&map.soil$year==2017,]
 
+### Soil rarefied datasets (down to 19,967 reads per sample)
+otu_soil_rare.2016 <- otu_soil_rare[,map.soil$year==2016]
+otu_soil_rare.2017 <- otu_soil_rare[,map.soil$year==2017]
+
+
+ss <- specnumber(otu_soil_rare, MARGIN=2)
+ss.2016 <- specnumber(otu_soil_rare.2016, MARGIN=2) 
+ss.2017 <- specnumber(otu_soil_rare.2017, MARGIN=2)
+
+
+cor.test(map.div.swg$time_numeric, map.div.swg$Richness)
+cor.test(map.div.swg$time_numeric, map.div.swg$Shannon)
+cor.test(map.div.swg$time_numeric, map.div.swg$Pielou)
+
+cor.test(map.div.mis$time_numeric, map.div.mis$Richness)
+cor.test(map.div.mis$time_numeric, map.div.mis$Shannon)
+cor.test(map.div.mis$time_numeric, map.div.mis$Pielou)
+
+
+plant_rare_otu <- otu_rare[,map_16S$source=="phyllosphere"]
+plant_rare_otu.2016 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2016]
+plant_rare_otu.2017 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2017]
+soil_rare_otu.2016 <- otu_rare[,map_16S$source=="soil"&map_16S$year==2016]
+
+
+### Fore variance partitioning of the core taxa
+plant_rare_otu.2016.coretaxa <- plant_rare_otu.2016[core_taxa.df$x,]
+plant_rare_otu.2016.coretaxa.2016 <- plant_rare_otu.2016[core_taxa_2016.df,]
+plant_rare_otu.2016.coretaxa.rel <- decostand(plant_rare_otu.2016.coretaxa, MARGIN = 2, method = "total")
+plant_rare_otu.2016.coretaxa.2016.rel <- decostand(plant_rare_otu.2016.coretaxa.2016, MARGIN=2, method="total")
+
+
+plant_rare_otu.2016.coretaxa.2016.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.2016), method="bray")
+
+plant_rare_otu.2016.coretaxa.rel.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.rel), method="bray")
+
+plant_rare_otu.2016.coretaxa.2016.rel.dist <- vegdist(t(plant_rare_otu.2016.coretaxa.2016.rel), method="bray")
+
+
+otu_rare.2017 <- otu_rare[,map_16S$year=="2017"]
+colnames(otu_rare.2017) == map.2017$sequence_name
 
 misc_rare_otu.2016 <- plant_rare_otu.2016[,map.plant.2016$plant=="miscanthus"]
 switch_rare_otu <- plant_rare_otu[,map.plant$plant=="switchgrass"]
@@ -2281,6 +2089,23 @@ cor.test(misc_dispersion_avg$mean, unique(misc.map.2016$time_numeric)[order(uniq
 ############################
 ### Figure 1B Whole PCoA ###
 ############################
+map_16S$timepoint <- rep(1,nrow(map_16S))
+map_16S$timepoint[map_16S$sampling_date=="2016-05-31"]<- 2
+map_16S$timepoint[map_16S$sampling_date=="2017-06-05"]<- 2
+map_16S$timepoint[map_16S$sampling_date=="2016-06-20"]<- 3
+map_16S$timepoint[map_16S$sampling_date=="2017-06-26"]<- 3
+map_16S$timepoint[map_16S$sampling_date=="2016-07-12"] <- 4
+map_16S$timepoint[map_16S$sampling_date=="2017-07-17"]<- 4
+map_16S$timepoint[map_16S$sampling_date=="2016-08-01"] <- 5
+map_16S$timepoint[map_16S$sampling_date=="2017-08-07"] <- 5
+map_16S$timepoint[map_16S$sampling_date=="2016-08-22"] <- 6
+map_16S$timepoint[map_16S$sampling_date=="2017-08-28"]<- 6
+map_16S$timepoint[map_16S$sampling_date=="2016-09-12"] <- 7
+map_16S$timepoint[map_16S$sampling_date=="2017-09-18"]<- 7
+map_16S$timepoint[map_16S$sampling_date=="2016-10-03"]<- 8
+map_16S$timepoint[map_16S$sampling_date=="2016-11-07"]<- 9
+
+
 whole.pcoa.2016 <- cmdscale(whole.dist.2016, eig=TRUE)
 ax1.whole.2016 <- whole.pcoa.2016$eig[1]/sum(whole.pcoa.2016$eig)
 ax2.whole.2016 <- whole.pcoa.2016$eig[2]/sum(whole.pcoa.2016$eig)
@@ -2340,12 +2165,17 @@ dev.off()
 
 
 plant.pcoa <- cmdscale(plant.dist, eig=TRUE)
+
+switch.pcoa <- cmdscale(switch.dist, eig=TRUE)
+
 plant.pcoa.2016 <- cmdscale(plant.dist.2016, eig=TRUE)
 ax1.plant.2016 <- plant.pcoa.2016$eig[1]/sum(plant.pcoa.2016$eig)
 ax2.plant.2016 <- plant.pcoa.2016$eig[2]/sum(plant.pcoa.2016$eig)
 ax1.plant <- plant.pcoa$eig[1]/sum(plant.pcoa$eig)
 ax2.plant <- plant.pcoa$eig[2]/sum(plant.pcoa$eig)
 
+ax1.switch <- switch.pcoa$eig[1]/sum(switch.pcoa$eig)
+ax2.switch <- switch.pcoa$eig[2]/sum(switch.pcoa$eig)
 
 ### Make collapsed PCoA Coordinates
 
@@ -2354,11 +2184,15 @@ Sample_Dates <- Sample_Dates[order(Sample_Dates)]
 Sample_Dates.2016 <- unique(map.plant.2016$sampling_Rdate)
 plant_coordinates.2016 <- plant.pcoa.2016$points
 plant_coordinates <- plant.pcoa$points
-  
+
+switch_coordinates <- switch.pcoa$points
+Sample_Dates.switch <- unique(switch.map$sampling_Rdate)[order(unique(switch.map$sampling_Rdate))]  
   
 misc_collapse.2016 <- data.frame(ax1.average=rep(NA,9),ax2.average=rep(NA,9), ax1.sd=rep(NA,9), ax2.sd=rep(NA,9) )
 switch_collapse.2016 <- data.frame(ax1.average=rep(NA,9),ax2.average=rep(NA,9), ax1.sd=rep(NA,9), ax2.sd=rep(NA,9) )
 switch_collapse.2017 <- data.frame(ax1.average=rep(NA,9), ax2.average=rep(NA,9), ax1.sd=rep(NA,9), ax2.sd=rep(NA,9))
+
+switch_collapse <- data.frame(ax1.average=rep(NA,15),ax2.average=rep(NA,15), ax1.sd=rep(NA,15), ax2.sd=rep(NA,15) )
 
 for (i in 1:length(unique(map.plant.2016$sampling_Rdate))){
   b <- plant_coordinates.2016[map.plant.2016$sampling_Rdate==Sample_Dates.2016[i],]
@@ -2374,6 +2208,142 @@ for (i in 1:length(unique(map.plant.2016$sampling_Rdate))){
   switch_collapse.2016[i,3] <-sd(s[,1])
   switch_collapse.2016[i,4] <-sd(s[,1])
 }
+
+switch.2016.point_size <- seq(from=1, to=3, length.out = 8)
+switch.2017.point_size <- seq(from=1, to=3, length.out = 7)
+
+for (i in 1:length(unique(switch.map$sampling_Rdate))){
+  b <- switch_coordinates[switch.map$sampling_Rdate==Sample_Dates.switch[i],]
+  switch_collapse[i,1] <-mean(b[,1])
+  switch_collapse[i,2] <- mean(b[,2])
+  switch_collapse[i,3] <-sd(b[,1])
+  switch_collapse[i,4] <-sd(b[,1])
+}
+point_sizes_switch.collapse <- c(switch.2016.point_size, switch.2017.point_size) 
+point_colors_switch.collapse <- c(rep("darkolivegreen3", 8), rep("darkolivegreen1",7))
+
+switch.weather <- switch.map[,c("precipitation", "Air_temp_mean", "air_temp_max", "Air_Temp_Min", "Air_Pressure", "RH", "AH", "Wind_Speed_Mean", "Solar_Radiation", "PAR", "soil_temp_5_cm_bare_avg", "sampling_Rdate", "time_numeric")]
+switch.weather <- unique(switch.weather)
+
+switch.leaf.chemistry <- switch.map[,c("LDMC_mg_per_g", "nitrogen_percent", "carbon_percent", "carbon_per_nitrogen", "height_mean_cm")]
+switch.soil.chemsitry <- switch.map[,c("pH", "P_ppm", "K_ppm", "Ca_ppm", "Mg_ppm", "organic_matter", "NO3N_ppm", "NH4_ppm", "soil_moisture_percent", "soil_temp_10cm")]
+for (i in 1:ncol(switch.soil.chemsitry)){
+  switch.soil.chemsitry[,i] <- as.numeric(switch.soil.chemsitry[,i])
+}
+switch.LC.envfit <- envfit(switch.pcoa, switch.leaf.chemistry)
+switch.LC.envfit.R40 <- envfit(switch.pcoa, switch.leaf.chemistry[,c("LDMC_mg_per_g", "nitrogen_percent", "carbon_per_nitrogen", "height_mean_cm")])
+
+switch.SC.envfit <- envfit(switch.pcoa, switch.soil.chemsitry)
+switch.SC.envfit.R40 <- envfit(switch.pcoa, switch.soil.chemsitry[,c("soil_moisture_percent")])
+switch.weather.envfit <- envfit(switch_collapse[,1:2], switch.weather)
+
+switch.LC.envfit$vectors
+
+
+setEPS()
+postscript("Switch_Phyllo_PCoa.eps", width=5, height=5,pointsize=10, paper="special",)
+par(mar = c(5.1, 5.1, 2.1, 2.1))
+plot(switch_collapse$ax1.average, switch_collapse$ax2.average, cex=point_sizes_switch.collapse, col=point_colors_switch.collapse, pch=16, xlim=c(-.5,.4), ylim=c(-.25,.4), xlab=paste("PCoA1: ",100*round(ax1.switch,3),"% var. explained",sep=""), ylab=paste("PCoA2: ",100*round(ax2.switch,3),"% var. explained",sep=""))+
+arrows(switch_collapse$ax1.average, switch_collapse$ax2.average-switch_collapse$ax1.sd, switch_collapse$ax1.average, switch_collapse$ax2.average+switch_collapse$ax2.sd, angle=90,length= 0.05, code=3,lwd=0.75, col=point_colors_switch.collapse)+
+arrows(switch_collapse$ax1.average- switch_collapse$ax1.sd, switch_collapse$ax2.average, switch_collapse$ax1.average + switch_collapse$ax1.sd, switch_collapse$ax2.average, angle=90,length= 0.05, code=3,lwd=0.75, col= point_colors_switch.collapse)+
+  plot(switch.LC.envfit.R40, p=0.05, col="black")+
+  plot(switch.SC.envfit.R40, p=0.05, col="black", labels="soil_moisture")+
+  plot(switch.weather.envfit, p=0.05, col="black")
+dev.off()
+
+SwitchData_Pcoa <- data.frame(Ax1=switch_collapse$ax1.average, Ax2=switch_collapse$ax2.average, Year= factor(c(rep(2016,8), rep(2017,7)), levels=c(2016,2017)), PointSize =c(switch.2016.point_size, switch.2017.point_size))
+
+
+switch.LC.envfit.R40
+switch.LC.envfit.R40.df<-as.data.frame(switch.LC.envfit.R40$vectors$arrows*sqrt(switch.LC.envfit.R40$vectors$r))
+switch.LC.envfit.R40.df$species<-rownames(switch.LC.envfit.R40.df)
+
+spp.scrs <- as.data.frame(scores(switch.LC.envfit.R40, display = "vectors"))
+spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs))
+
+
+vegan:::ordiArrowMul(switch.LC.envfit.R40)
+
+##### Trying to figure out ggplot EnvFit
+ggplot(SwitchData_Pcoa, aes(x=Ax1, y=Ax2)) +
+  geom_point(size=SwitchData_Pcoa$PointSize*2, aes(color=Year)) +
+  scale_color_manual(values =c("darkolivegreen3", "darkolivegreen1")) +
+  coord_fixed()+
+  geom_segment(data=switch.LC.envfit.R40.df,aes(x=0,xend=Dim1,y=0,yend=Dim2))
+  
+ggplot(SwitchData_Pcoa, aes(x=Ax1, y=Ax2)) +
+  geom_point(size=SwitchData_Pcoa$PointSize*2, aes(color=Year)) +
+  scale_color_manual(values =c("darkolivegreen3", "darkolivegreen1")) +
+  coord_fixed()+
+  geom_segment(data=spp.scrs, aes(x=0,xend=Dim1*0.4075751,y=0,yend=Dim2*0.4075751))
+
+
+
+switch.whole.map <- map_16S[map_16S$plant=="switchgrass",]
+switch.whole.otu <- otu_rare[,map_16S$plant=="switchgrass"]
+switch.whole.dist <- vegdist(t(switch.whole.otu), method = "bray")
+switch.whole.pcoa <- cmdscale(switch.whole.dist, eig=TRUE)
+
+ax1.switch.whole <- switch.whole.pcoa$eig[1]/sum(switch.whole.pcoa$eig)
+ax2.switch.whole <- switch.whole.pcoa$eig[2]/sum(switch.whole.pcoa$eig)
+
+switch.whole.point_color <- rep("darkolivegreen3", nrow(switch.whole.map))
+switch.whole.point_color[switch.whole.map$Year==2017] <- "darkolivegreen1"
+switch.whole.point_color[switch.whole.map$Year==2016&switch.whole.map$source=="soil"] <- "burlywood"
+switch.whole.point_color[switch.whole.map$Year==2017&switch.whole.map$source=="soil"] <- "brown"
+
+switch.whole.point.size.2016 <- seq(from=1, to=3, length.out=length(unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2016])))
+switch.whole.point.size.2017 <- seq(from=1, to=3, length.out=length(unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2017])))
+
+switch.dates.2016 <- unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2016])[order(unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2016]))]
+switch.dates.2017 <- unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2017])[order(unique(switch.whole.map$sampling_Rdate[switch.whole.map$Year==2017]))]
+
+switch.whole.point.sizes <- rep(1, nrow(switch.whole.map))
+
+for(i in 1:length(switch.dates.2016)){
+  switch.whole.point.sizes[switch.whole.map$sampling_Rdate==switch.dates.2016[i]] <- switch.whole.point.size.2016[i]  
+}
+for(i in 1:length(switch.dates.2017)){
+  switch.whole.point.sizes[switch.whole.map$sampling_Rdate==switch.dates.2017[i]] <- switch.whole.point.size.2017[i]  
+}
+
+
+setEPS()
+postscript("Switch_Whole_PCoa.eps", width=5, height=5,pointsize=10, paper="special",)
+par(mar = c(5.1, 5.1, 2.1, 2.1))
+plot(switch.whole.pcoa$points[,1],switch.whole.pcoa$points[,2], pch=16, col=switch.whole.point_color, cex=switch.whole.point.sizes, xlab=paste("PCoA1: ",100*round(ax1.switch.whole,3),"% var. explained",sep=""), ylab=paste("PCoA2: ",100*round(ax2.switch.whole,3),"% var. explained",sep=""))
+dev.off()
+
+
+switch.phyllo.otu <- switch.whole.otu[,switch.whole.map$source=="phyllosphere"]
+
+switch.phyllo.ptaxa.otu <- switch.phyllo.otu[rowSums(switch.phyllo.otu)>0,]
+
+switch.soil.otu <- switch.whole.otu[,switch.whole.map$source=="soil"]
+
+switch.soil.ptaxa.otu <- switch.soil.otu[rowSums(switch.phyllo.otu)>0,]
+
+switch.phyllo.avg.abund <- rowSums(switch.phyllo.ptaxa.otu)/sum(colSums(switch.phyllo.ptaxa.otu))
+switch.soil.avg.abund <- rowSums(switch.soil.ptaxa.otu)/sum(colSums(switch.soil.ptaxa.otu))
+
+
+
+Avg.abund.data <- data.frame(Average_Relative_Abundance_Phyllosphere=switch.phyllo.avg.abund, Average_Relative_Abundance_Soil=switch.soil.avg.abund)
+AvgAbund_colors <- rep("black", nrow(Avg.abund.data))
+AvgAbund_colors[row.names(Avg.abund.data)%in%Switch_core] <- "green"
+AvgAbund_colors[row.names(Avg.abund.data)%in%Switch_core.2016] <- "darkolivegreen3"
+AvgAbund_colors[row.names(Avg.abund.data)%in%Switch_core.2017] <- "darkolivegreen1"
+
+AvgAbund_size <- rep(1, nrow(Avg.abund.data) )
+AvgAbund_size[row.names(Avg.abund.data)%in%Switch_core] <- 3
+AvgAbund_size[row.names(Avg.abund.data)%in%Switch_core.2016] <- 3
+AvgAbund_size[row.names(Avg.abund.data)%in%Switch_core.2017] <- 3
+
+FigX <-ggplot(Avg.abund.data, aes(y=log10(Average_Relative_Abundance_Phyllosphere), x=log10(Average_Relative_Abundance_Soil))) + geom_point(color=AvgAbund_colors, size=AvgAbund_size)
+ggsave(filename ="RelativeABundancePlot.eps",FigX, device="eps", width=5, height = 5, units = "in" )
+
+
+
 
 
 for (i in 1:length(unique(map.plant$sampling_Rdate))){
@@ -2787,6 +2757,10 @@ ST_Occ_plotdata.2016 <- data.frame(OTU=row.names(plant_both_taxa.2016), SoilOccu
 core_taxa.df <- read.table("~/Downloads/core_list.csv", header = TRUE, row.names = 1, sep=",", stringsAsFactors = FALSE)
 core_taxa_2016.df <- as.character(core_taxa.df$x[!core_taxa.df$x%in%c("OTU84", "OTU86", "OTU4223")])
 
+Switch_core <- c("OTU5", "OTU47", "OTU14", "OTU2771", "OTU7", "OTU10","OTU18","OTU41","OTU4", "OTU23", "OTU2","OTU430", "OTU6", "OTU22", "OTU21", "OTU192", "OTU90", "OTU537")
+Switch_core.2016 <- c("OTU995", "OTU15", "OTU32", "OTU1334", "OTU6096", "OTU842")
+Switch_core.2017 <- c("OTU519", "OTU84", "OTU86", "OTU4223")
+
 
 core_taxa <- c("53","117","4","16","27","32","8","9","20","19","2","25","3","21","37","30","6","44","63","920","10","101","641","80")
 
@@ -3092,6 +3066,543 @@ plant_rare_otu.PA.2017 <- 1*(rowSums(plant_rare_otu.2017)>0)
 otu_soil_full.PA.2017 <- 2*(rowSums(otu_soil_full.2017)>0) 
 
 table(plant_rare_otu.PA.2017 + otu_soil_full.PA.2017)
+
+##### Nejc's Updates to code
+
+#####
+#Table S1 - EnvFit
+#####
+
+
+whole.dist <- vegdist(t(otu_rare), method="bray")
+switch.dist <- vegdist(t(otu_rare[,map_16S$source=="phyllosphere"&map_16S$plant=="switchgrass"]), method="bray")
+plant.dist <- vegdist(t(otu_rare[,map_16S$source=="phyllosphere"]), method="bray")
+soil.dist <- vegdist(t(otu_rare[,map_16S$source=="soil"]), method="bray")
+
+map_16S$timepoint <- rep(1,nrow(map_16S))
+map_16S$timepoint[map_16S$sampling_date=="2016-05-31"]<- 2
+map_16S$timepoint[map_16S$sampling_date=="2017-06-05"]<- 2
+map_16S$timepoint[map_16S$sampling_date=="2016-06-20"]<- 3
+map_16S$timepoint[map_16S$sampling_date=="2017-06-26"]<- 3
+map_16S$timepoint[map_16S$sampling_date=="2016-07-12"] <- 4
+map_16S$timepoint[map_16S$sampling_date=="2017-07-17"]<- 4
+map_16S$timepoint[map_16S$sampling_date=="2016-08-01"] <- 5
+map_16S$timepoint[map_16S$sampling_date=="2017-08-07"] <- 5
+map_16S$timepoint[map_16S$sampling_date=="2016-08-22"] <- 6
+map_16S$timepoint[map_16S$sampling_date=="2017-08-28"]<- 6
+map_16S$timepoint[map_16S$sampling_date=="2016-09-12"] <- 7
+map_16S$timepoint[map_16S$sampling_date=="2017-09-18"]<- 7
+map_16S$timepoint[map_16S$sampling_date=="2016-10-03"]<- 8
+map_16S$timepoint[map_16S$sampling_date=="2016-11-07"]<- 9
+
+map.whole <- map_16S
+map.switch <- map_16S[map_16S$source=="phyllosphere" & map_16S$plant=="switchgrass",]
+map.plant <- map_16S[map_16S$source=="phyllosphere",]
+map.soil <- map_16S[map_16S$source=="soil",]
+
+rownames(t(otu_rare[,map_16S$source=="phyllosphere"])) == map.plant$sequence_name
+rownames(t(otu_rare[,map_16S$source=="soil"])) == map.soil$sequence_name
+
+Soil_Chemistry_whole<- map.whole[,c('timepoint',"pH", "P_ppm", "K_ppm", "Ca_ppm", "Mg_ppm", "organic_matter", "NO3N_ppm", "NH4_ppm")]
+for (i in 1:ncol(Soil_Chemistry_whole)){
+  Soil_Chemistry_whole[,i] <- as.numeric(Soil_Chemistry_whole[,i])
+}
+Leaf_Chemistry.whole <- map.whole[,c("precipitation", "Air_temp_mean", "air_temp_max", "Air_Temp_Min", "Air_Pressure", "RH", "AH", "Wind_Speed_Mean", "Solar_Radiation", "PAR", "soil_temp_5_cm_bare_avg", "sampling_Rdate")]
+numeric_map.whole <- cbind(Soil_Chemistry_whole,Leaf_Chemistry.whole)
+
+Soil_Chemistry_soil<- map.soil[,c('timepoint',"pH", "P_ppm", "K_ppm", "Ca_ppm", "Mg_ppm", "organic_matter", "NO3N_ppm", "NH4_ppm")]
+for (i in 1:ncol(Soil_Chemistry_soil)){
+  Soil_Chemistry_soil[,i] <- as.numeric(Soil_Chemistry_soil[,i])
+}
+Leaf_Chemistry.soil <- map.soil[,c("precipitation", "Air_temp_mean", "air_temp_max", "Air_Temp_Min", "Air_Pressure", "RH", "AH", "Wind_Speed_Mean", "Solar_Radiation", "PAR", "soil_temp_5_cm_bare_avg", "sampling_Rdate")]
+numeric_map.soil <- cbind(Soil_Chemistry_soil,Leaf_Chemistry.soil)
+
+Soil_Chemistry_plant<- map.plant[,c('timepoint',"pH", "P_ppm", "K_ppm", "Ca_ppm", "Mg_ppm", "organic_matter", "NO3N_ppm", "NH4_ppm")]
+for (i in 1:ncol(Soil_Chemistry_plant)){
+  Soil_Chemistry_plant[,i] <- as.numeric(Soil_Chemistry_plant[,i])
+}
+Leaf_Chemistry.plant <- map.plant[,c("precipitation", "Air_temp_mean", "air_temp_max", "Air_Temp_Min", "Air_Pressure", "RH", "AH", "Wind_Speed_Mean", "Solar_Radiation", "PAR", "soil_temp_5_cm_bare_avg", "sampling_Rdate",
+                                     'carbon_percent', 'nitrogen_percent', 'carbon_per_nitrogen')]
+numeric_map.plant <- cbind(Soil_Chemistry_plant,Leaf_Chemistry.plant)
+
+Soil_Chemistry_switch<- map.switch[,c('timepoint',"pH", "P_ppm", "K_ppm", "Ca_ppm", "Mg_ppm", "organic_matter", "NO3N_ppm", "NH4_ppm")]
+for (i in 1:ncol(Soil_Chemistry_switch)){
+  Soil_Chemistry_switch[,i] <- as.numeric(Soil_Chemistry_switch[,i])
+}
+Leaf_Chemistry.switch <- map.switch[,c("precipitation", "Air_temp_mean", "air_temp_max", "Air_Temp_Min", "Air_Pressure", "RH", "AH", "Wind_Speed_Mean", "Solar_Radiation", "PAR", "soil_temp_5_cm_bare_avg", "sampling_Rdate",
+                                       'carbon_percent', 'nitrogen_percent', 'carbon_per_nitrogen')]
+numeric_map.switch <- cbind(Soil_Chemistry_switch,Leaf_Chemistry.switch)
+
+plant.pcoa <- cmdscale(plant.dist, eig=TRUE)
+soil.pcoa <- cmdscale(soil.dist, eig=TRUE)
+switch.pcoa <- cmdscale(switch.dist, eig=TRUE)
+whole.pcoa <- cmdscale(whole.dist, eig=TRUE)
+
+env.plant <- envfit(plant.pcoa, numeric_map.plant)
+env.soil <- envfit(soil.pcoa, numeric_map.soil)
+env.switch <- envfit(switch.pcoa, numeric_map.switch)
+env.whole <- envfit(whole.pcoa, numeric_map.whole)
+
+EnvFit.plant <- as.data.frame(env.plant$vectors$arrows)
+EnvFit.plant$Rsquared <- env.plant$vectors$r
+EnvFit.plant$pvalue <- env.plant$vectors$pvals
+EnvFit.plant$desc <- 'phyllosphere'
+EnvFit.plant$variable <- rownames(EnvFit.plant)
+rownames(EnvFit.plant) <- NULL
+Sig_plant_EnvFit <- EnvFit.plant[EnvFit.plant$pvalue<0.05,]
+
+EnvFit.soil <- as.data.frame(env.soil$vectors$arrows)
+EnvFit.soil$Rsquared <- env.soil$vectors$r
+EnvFit.soil$pvalue <- env.soil$vectors$pvals
+EnvFit.soil$desc <- 'soil'
+EnvFit.soil$variable <- rownames(EnvFit.soil)
+rownames(EnvFit.soil) <- NULL
+Sig_soil_EnvFit <- EnvFit.soil[EnvFit.soil$pvalue<0.05,]
+
+EnvFit.switch <- as.data.frame(env.switch$vectors$arrows)
+EnvFit.switch$Rsquared <- env.switch$vectors$r
+EnvFit.switch$pvalue <- env.switch$vectors$pvals
+EnvFit.switch$desc <- 'switchgrass'
+EnvFit.switch$variable <- rownames(EnvFit.switch)
+rownames(EnvFit.switch) <- NULL
+Sig_switch_EnvFit <- EnvFit.switch[EnvFit.switch$pvalue<0.05,]
+
+EnvFit.whole <- as.data.frame(env.whole$vectors$arrows)
+EnvFit.whole$Rsquared <- env.whole$vectors$r
+EnvFit.whole$pvalue <- env.whole$vectors$pvals
+EnvFit.whole$desc <- 'all'
+EnvFit.whole$variable <- rownames(EnvFit.whole)
+rownames(EnvFit.whole) <- NULL
+Sig_whole_EnvFit <- EnvFit.whole[EnvFit.whole$pvalue<0.05,]
+
+All_EnvFit <- rbind(Sig_whole_EnvFit, Sig_soil_EnvFit, Sig_plant_EnvFit, Sig_switch_EnvFit)
+library(reshape2)
+envfit_data <- acast(All_EnvFit, factor(desc)~variable, value.var="Rsquared")
+envfit_data
+
+write.table(file = "~/Dropbox/GLBRC_16S/Table1_EnvFit.txt", x=envfit_data, sep="\t", quote=FALSE, col.names = TRUE, row.names = TRUE)
+
+
+#####
+#Figure1ABC
+#####
+soil.pcoa <- cmdscale(soil.dist, eig=TRUE)
+whole.pcoa <- cmdscale(whole.dist, eig=TRUE)
+ax1.whole <- whole.pcoa$eig[1]/sum(whole.pcoa$eig)
+ax2.whole <- whole.pcoa$eig[2]/sum(whole.pcoa$eig)
+
+Unique_Dates_soil <- unique(map.soil$sampling_week)[order(unique(map.soil$sampling_week))]
+Date_Size_soil <- rep(1, nrow(map.soil))
+point_sizes_soil <- seq(from=1, to=3, length.out = length(Unique_Dates_soil))
+for(i in 1:length(Unique_Dates_soil)){
+  Date_Size_soil[map_16S$sampling_week==Unique_Dates_soil[i]] <- point_sizes_soil[i]
+}
+
+soil_plot_colors <- rep("darkolivegreen3", nrow(map.soil))
+soil_plot_colors[map.soil$plant=="miscanthus" & map.soil$year==2016] <- "darkgreen"
+soil_plot_colors[map.soil$plant=="switchgrass" & map.soil$year==2017] <- "darkolivegreen1"
+soil_plot_colors[map.soil$source=="soil" & map.soil$year==2016] <- "burlywood4"
+soil_plot_colors[map.soil$source=="soil"&map.soil$plant=="switchgrass"&map.soil$year==2016] <- "burlywood"
+soil_plot_colors[map.soil$source=="soil"&map.soil$year==2017] <- "brown"
+soil_plot_shapes <- rep(15, nrow(map.soil))
+soil_plot_shapes[map.soil$plant=="switchgrass"] <- 16
+soil_plot_shapes[map.soil$plant=="switchgrass"& map.soil$source=="soil" & map.soil$treatment=="nitrogen free"] <- 1 
+soil_plot_shapes[map.soil$plant=="miscanthus"& map.soil$source=="soil"& map.soil$treatment=="nitrogen free"] <- 0 
+
+Unique_Dates_plant <- unique(map.plant$sampling_week)[order(unique(map.plant$sampling_week))]
+Date_Size_plant <- rep(1, nrow(map.plant))
+point_sizes_plant <- seq(from=1, to=3, length.out = length(Unique_Dates_plant))
+for(i in 1:length(Unique_Dates_plant)){
+  Date_Size_plant[map_16S$sampling_week==Unique_Dates_plant[i]] <- point_sizes_plant[i]
+}
+
+
+plant_plot_colors <- rep("darkolivegreen3", nrow(map.plant))
+plant_plot_colors[map.plant$plant=="miscanthus" & map.plant$year==2016] <- "darkgreen"
+plant_plot_colors[map.plant$plant=="switchgrass" & map.plant$year==2017] <- "darkolivegreen1"
+plant_plot_colors[map.plant$source=="soil" & map.plant$year==2016] <- "burlywood4"
+plant_plot_colors[map.plant$source=="soil"&map.plant$plant=="switchgrass"&map.plant$year==2016] <- "burlywood"
+plant_plot_colors[map.plant$source=="soil"&map.plant$year==2017] <- "brown"
+plant_plot_shapes <- rep(15, nrow(map.plant))
+plant_plot_shapes[map.plant$plant=="switchgrass"] <- 16
+plant_plot_shapes[map.plant$plant=="switchgrass"& map.plant$source=="soil" & map.plant$treatment=="nitrogen free"] <- 1 
+plant_plot_shapes[map.plant$plant=="miscanthus"& map.plant$source=="soil"& map.plant$treatment=="nitrogen free"] <- 0 
+
+env.whole <- envfit(whole.pcoa, numeric_map.whole[,-which(names(numeric_map.whole)=='sampling_Rdate')])
+
+Unique_Dates_whole <- unique(map.whole$sampling_week)[order(unique(map.whole$sampling_week))]
+Date_Size_whole <- rep(1, nrow(map.whole))
+point_sizes_whole <- seq(from=1, to=3, length.out = length(Unique_Dates_whole))
+for(i in 1:length(Unique_Dates_whole)){
+  Date_Size_whole[map_16S$sampling_week==Unique_Dates_whole[i]] <- point_sizes_whole[i]
+}
+
+whole_plot_colors <- rep("darkolivegreen3", nrow(map.whole))
+whole_plot_colors[map.whole$plant=="miscanthus" & map.whole$year==2016] <- "darkgreen"
+whole_plot_colors[map.whole$plant=="switchgrass" & map.whole$year==2017] <- "darkolivegreen1"
+whole_plot_colors[map.whole$source=="soil" & map.whole$year==2016] <- "burlywood4"
+whole_plot_colors[map.whole$source=="soil"&map.whole$plant=="switchgrass"&map.whole$year==2016] <- "burlywood"
+whole_plot_colors[map.whole$source=="soil"&map.whole$year==2017] <- "brown"
+whole_plot_shapes <- rep(15, nrow(map.whole))
+whole_plot_shapes[map.whole$plant=="switchgrass"] <- 16
+whole_plot_shapes[map.whole$plant=="switchgrass"& map.whole$source=="soil" & map.whole$treatment=="nitrogen free"] <- 1 
+whole_plot_shapes[map.whole$plant=="miscanthus"& map.whole$source=="soil"& map.whole$treatment=="nitrogen free"] <- 0 
+
+
+plant.pcoa <- cmdscale(plant.dist, eig=TRUE)
+soil.pcoa <- cmdscale(soil.dist, eig=TRUE)
+env.plant <- envfit(plant.pcoa, numeric_map.plant[,-which(names(numeric_map.plant)=='sampling_Rdate')])
+env.soil <- envfit(soil.pcoa, numeric_map.soil[,-which(names(numeric_map.soil)=='sampling_Rdate')])
+ax1.soil <- soil.pcoa$eig[1]/sum(soil.pcoa$eig)
+ax2.soil <- soil.pcoa$eig[2]/sum(soil.pcoa$eig)
+ax1.plant <- plant.pcoa$eig[1]/sum(plant.pcoa$eig)
+ax2.plant <- plant.pcoa$eig[2]/sum(plant.pcoa$eig)
+
+env.soil.sig <- envfit(soil.pcoa, map.soil[,c("K_ppm", "pH", "Air_Temp_Min", "Ca_ppm", "organic_matter")])
+
+#Fig1B
+plot(soil.pcoa$points[,1], soil.pcoa$points[,2], cex = Date_Size_soil,  pch= soil_plot_shapes, col=soil_plot_colors, 
+     xlab=paste("PCoA1: ",100*round(ax1.soil,3),"% var. explained",sep=""), 
+     ylab=paste("PCoA2: ",100*round(ax2.soil,3),"% var. explained",sep="")) +
+  title('B', adj=0) 
+
+#Fig1A
+plot(ylim = c(-0.4,0.4), xlim=c(-0.5,0.4),collapsed_data.pcoa$ax1.average, collapsed_data.pcoa$ax2.average, pch=plant_shapes, cex=Date_Size_plant, col= plot_colors, xlab=paste("PCoA1: ",100*round(ax1.plant,3),"% var. explained",sep=""), ylab=paste("PCoA2: ",100*round(ax2.plant,3),"% var. explained",sep="")) +
+  arrows(collapsed_data.pcoa$ax1.average, collapsed_data.pcoa$ax2.average-collapsed_data.pcoa$ax1.sd, collapsed_data.pcoa$ax1.average, collapsed_data.pcoa$ax2.average+collapsed_data.pcoa$ax2.sd, angle=90,length= 0.05, code=3,lwd=0.75, col= plot_colors) +
+  arrows(collapsed_data.pcoa$ax1.average- collapsed_data.pcoa$ax1.sd, collapsed_data.pcoa$ax2.average, collapsed_data.pcoa$ax1.average + collapsed_data.pcoa$ax1.sd, collapsed_data.pcoa$ax2.average, angle=90,length= 0.05, code=3,lwd=0.75, col= plot_colors)+
+  plot(R40_collapsed.weather.ef, p=0.05, col="black")+
+  plot(R40_LC.env, p=0.05, col="black", labels="nitrogen_percent") +
+  title('A', adj=0)
+
+#Fig1C
+plot(whole.pcoa$points[,1], whole.pcoa$points[,2], cex= Date_Size_whole, pch= whole_plot_shapes, col=whole_plot_colors, 
+     xlab=paste("PCoA1: ",100*round(ax1.whole.2016,3),"% var. explained",sep=""), 
+     ylab=paste("PCoA2: ",100*round(ax2.whole.2016,3),"% var. explained",sep="")) +
+  title('C', adj=0)
+legend(-.342,-.19,box.lty=0,
+       legend = c('Switchgrass soil (NF) 2016','Switchgrass soil (F) 2016',
+                  'Switchgrass soil (NF) 2017','Switchgrass soil (NF) 2017',
+                  'Switchgrass phyllosphere 2016','Switchgrass phyllosphere 2017',
+                  'Miscanthus soil (NF) 2016','Miscanthus soil (F) 2016',
+                  'Miscanthus phyllosphere 2016'), 
+       pch=c(1,16,1,16,16,16,0,15,15), 
+       col=c("burlywood", "burlywood", 
+             "brown", "brown",
+             "darkolivegreen3", "darkolivegreen1",
+             'burlywood4', 'burlywood4',
+             "darkgreen"),
+       cex=0.75,
+       pt.cex=1,
+       title='Sample (treatment)') 
+legend(-.28, -.1, box.lty = 0,
+       pch=16,
+       title='Sampling week',
+       c('0', '3', '9'),
+       horiz=TRUE,
+       pt.cex=c(1, 1.666667, 3),
+       cex=.75)
+
+############
+##FigS2
+############
+C <- ggplot(switch.disper.dates.2017, aes(x=dates, y=distance))+
+  geom_boxplot(aes(group=dates),fill="darkolivegreen3")+
+  them_bw()+
+  annotate("text", x = as.Date("2017-11-07"), y = 0.25, label = "NA")+
+  labs(y="Distance to Median", x="Date", title="C") + 
+  scale_y_continuous(limits = c(0, .5))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2017-05-01', '2017-11-15')))
+
+B<- ggplot(switch_dispersion_dates.2016, aes(x=dates, y=distance))+
+  geom_boxplot(aes(group=dates),fill="darkolivegreen3")+
+  them_bw()+
+  annotate("text", x = as.Date("2016-11-07"), y = 0.25, label = "NA")+
+  labs(y="Distance to Median", x="Date", title="B") + 
+  scale_y_continuous(limits = c(0, .5))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2016-05-01', '2016-11-15')))
+
+A<- ggplot(misc_disperion_dates, aes(x=dates, y=distance)) +
+  geom_boxplot(aes(group=dates),fill="darkgreen")+
+  them_bw()+
+  labs(y="Distance to Median", x="Date", title="A") + 
+  scale_y_continuous(limits = c(0, .5))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2016-05-01', '2016-11-15'))) 
+
+setEPS()
+postscript("~/Dropbox/GLBRC_16S/Figures/FigureS2_v2.eps", width=4, height=8, paper="special")
+par(ps = 8, cex = 1, cex.main = 1)
+multiplot(A,B,C, cols=1)
+dev.off()
+
+#####
+#FigureS4
+#####
+B <- ggplot(switch.Pielou.2016, aes(x=sampling_Rdate, y=value)) +  
+  geom_boxplot(mapping=aes(group=sampling_Rdate), fill="darkolivegreen3")+  
+  #geom_point(color="darkolivegreen3") +
+  annotate("text", x = as.Date("2016-11-07"), y = .5, label = "NA")+
+  labs(y="Pielou's Evenness", x="Date", title ="B") + 
+  scale_y_continuous(limits = c(0, 1))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2016-05-01', '2016-11-15')))
+
+C <- ggplot(switch.Pielou.2017, aes(x=sampling_Rdate, y=value)) +  
+  geom_boxplot(mapping=aes(group=sampling_Rdate), fill="darkolivegreen3")+  
+  #geom_point(color="darkolivegreen3") +
+  annotate("text", x = as.Date("2017-11-07"), y = .5, label = "NA")+
+  labs(y="Pielou's Evenness", x="Date", title ="C") + 
+  scale_y_continuous(limits = c(0, 1))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2017-05-01', '2017-11-15')))
+
+A <- ggplot(misc.Pielou.2016, aes(x=sampling_Rdate, y=value)) + 
+  geom_boxplot(mapping=aes(group=sampling_Rdate), fill="darkgreen") + 
+  #geom_point(color="darkgreen") + 
+  labs(y="Pielou's Evenness", x="Date", title ="A") + 
+  scale_y_continuous(limits = c(0, 1))+
+  scale_x_date(date_breaks = "1 month", labels=date_format("%b"), limits= as.Date(c('2016-05-01', '2016-11-15'))) 
+
+setEPS()
+postscript("~/Dropbox/GLBRC_16S/Figures/FigureS4_v2.eps", width=4, height=8, paper="special")
+par(ps = 8, cex = 1, cex.main = 1)
+multiplot(A,B,C, cols=1)
+dev.off()
+
+
+#####
+#Ternary plot
+####
+misc_rare_otu.2016 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2016&map_16S$plant=='miscanthus']
+switch_rare_otu.2016 <- otu_rare[,map_16S$source=="phyllosphere"&map_16S$year==2016&map_16S$plant=='switchgrass']
+
+misc_taxa.2016 <- 3*(rowSums(misc_rare_otu.2016)>0)
+switch_taxa.2016 <- 1*(rowSums(switch_rare_otu.2016)>0)
+soil_taxa.2016 <- 2*(rowSums(soil_rare_otu.2016)>0)
+
+table(misc_taxa.2016 + switch_taxa.2016 + soil_taxa.2016)  
+
+# Abundance of shared taxa in soil samples
+soil_both_taxa.2016 <- soil_rare_otu.2016[(misc_taxa.2016 + switch_taxa.2016 + soil_taxa.2016)==6,]
+
+#Abundance of shared taxa in misc phyllosphere samples
+misc_both_taxa.2016 <- misc_rare_otu.2016[(misc_taxa.2016 + switch_taxa.2016 + soil_taxa.2016)==6,]
+
+#Abundance of shared taxa in switch phyllosphere samples
+switch_both_taxa.2016 <- switch_rare_otu.2016[(misc_taxa.2016 + switch_taxa.2016 + soil_taxa.2016)==6,]
+
+
+colSums(soil_both_taxa.2016)/colSums(soil_rare_otu.2016)
+range(colSums(soil_both_taxa.2016)/colSums(soil_rare_otu.2016))
+
+# Relative abundance of all shared taxa in soil samples
+RA_st_soil.2016 <- colSums(soil_both_taxa.2016)/colSums(soil_rare_otu.2016)
+
+# Average relative abudnace of all shared taxa in soil samples
+ARA_st_soil.2016 <- RA_st_soil.2016/nrow(soil_both_taxa.2016)
+
+# Shared Taxa's average relative abundance in soil samples
+ST_ARA_Soil.2016<-rowSums(soil_both_taxa.2016)/sum(colSums(soil_rare_otu.2016))
+
+# Shared Taxa's average relative abundance in misc phyllosphere samples
+ST_ARA_M.2016<-rowSums(misc_both_taxa.2016)/sum(colSums(misc_rare_otu.2016))
+
+# Shared Taxa's average relative abundance in switch phyllosphere samples
+ST_ARA_S.2016<-rowSums(switch_both_taxa.2016)/sum(colSums(switch_rare_otu.2016))
+
+ST_ARA_plotdata <- data.frame(OTU=row.names(soil_both_taxa.2016), SoilAbundance=ST_ARA_Soil.2016, MiscanthusAbundance=ST_ARA_M.2016, SwitchgrassAbundance=ST_ARA_S.2016)
+
+misc_both_taxa_PA.2016 <- 1*(misc_both_taxa.2016>0)
+switch_both_taxa_PA.2016 <- 1*(switch_both_taxa.2016>0)
+soil_both_taxa_PA.2016 <- 1*(soil_both_taxa.2016>0)
+
+ST_Occ_Misc.2016 <- rowSums(misc_both_taxa_PA.2016)/ncol(misc_both_taxa_PA.2016)
+ST_Occ_Switch.2016 <- rowSums(switch_both_taxa_PA.2016)/ncol(switch_both_taxa_PA.2016)
+ST_Occ_Soil.2016 <- rowSums(soil_both_taxa_PA.2016)/ ncol(soil_both_taxa_PA.2016) 
+
+ST_Occ_plotdata.2016 <- data.frame(OTU=row.names(soil_both_taxa.2016), SoilOccupancy=ST_Occ_Soil.2016, MiscanthusOccupancy=ST_Occ_Misc.2016, SwitchgrassOccupancy=ST_Occ_Switch.2016)
+
+core_taxa <- c("53","117","4","16","27","32","8","9","20","19","2","25","3","21","37","30","6","44","63","920","10","101","641","80")
+switchgrass_core_taxa <- c("104","12","1751","157","108","357","61")
+miscanthus_core_taxa <- c("83","149","22","40")
+
+core_taxa.2016 <- c("OTU47","OTU10", "OTU18", "OTU21", "OTU23", "OTU2", "OTU430", "OTU6", "OTU41", "OTU7", "OTU14", "OTU2771", "OTU5", "OTU4", "OTU22", "OTU995", "OTU32")
+core_taxa_misc.2016 <- c("OTU15", "OTU48", "OTU50", "OTU3994", "OTU995", "OTU519", "OTU1674", "OTU32")
+core_taxa_switch.2016 <- c("OTU192", "OTU6096", "OTU537", "OTU90", "OTU1334", "OTU842")
+
+FigS4_Colors <- rep("Black", length(ST_ARA_S.2016))
+FigS4_Colors[row.names(switch_both_taxa_PA.2016)%in%core_taxa.2016] <- "Green"
+FigS4_Colors[row.names(switch_both_taxa_PA.2016)%in%core_taxa_switch.2016] <- "darkolivegreen3"
+FigS4_Colors[row.names(switch_both_taxa_PA.2016)%in%core_taxa_misc.2016] <- "darkgreen"
+
+FigS4_Size <- rep(1, length(ST_ARA_P.2016))
+FigS4_Size[row.names(plant_both_taxa_PA.2016)%in%c(core_taxa.2016, core_taxa_switch.2016, core_taxa_misc.2016)] <- 2
+
+plant_occ <- data.frame(ST_Occ_Plant.2016)
+plant_occ$OTU <- rownames(plant_occ)
+rownames(plant_occ) <- c()
+ST_Occ_plotdata.2016$OTU <- as.character(ST_Occ_plotdata.2016$OTU) 
+plant_occ$OTU
+Occ_ternary_data <- left_join(data.frame(ST_Occ_plotdata.2016), plant_occ)
+
+#install.packages('ggtern')
+library(ggtern)
+ternaryOcc<- ggtern(data=Occ_ternary_data,aes(x=MiscanthusOccupancy, y=SoilOccupancy, z=SwitchgrassOccupancy, size=ST_Occ_Plant.2016, fill=ST_Occ_Plant.2016)) + 
+  theme_classic()+
+  theme_showarrows() +
+  theme_rotate(180)+
+  geom_point(pch=21)  + 
+  theme(legend.position = 'top') +
+  guides(size = 'none') +
+  labs(x="Miscanthus",y="Soil",z="Switchgrass", fill = 'Phyllosphere occupancy') 
+
+ST_ARA_plotdata$OTU <- as.character(ST_ARA_plotdata$OTU) 
+plant_abun <- data.frame(ST_ARA_P.2016)
+plant_abun$OTU <- rownames(plant_abun)
+rownames(plant_abun) <- c()
+Abun_ternary_data <- left_join(data.frame(ST_ARA_plotdata), plant_abun)
+
+ternaryAbun <- ggtern(data=Abun_ternary_data,aes(x=MiscanthusAbundance, y=SoilAbundance, z=SwitchgrassAbundance, size=ST_ARA_P.2016, fill=ST_ARA_P.2016)) + 
+  theme_classic()+
+  theme_showarrows() +
+  theme_rotate(180)+
+  geom_point(pch=21)  + 
+  theme(legend.position = 'top') +
+  guides(size = 'none') +
+  labs(x="Miscanthus",y="Soil",z="Switchgrass", fill = 'Phyllosphere \nrel. abundance') 
+
+setEPS()
+postscript("~/Dropbox/GLBRC_16S/Figures/ternary.eps", width=8, height=6, paper="special")
+par(ps = 8, cex = 1, cex.main = 1)
+multiplot(ternaryOcc,ternaryAbun,cols=2)
+dev.off()
+
+ST_Occ_plotdata.2016$SoilOccupancy+ST_Occ_plotdata.2016$MiscanthusOccupancy+ST_Occ_plotdata.2016$SwitchgrassOccupancy
+
+ST_ARA_plotdata.2016 <- data.frame(OTU=row.names(plant_both_taxa.2016), SoilAbundance=ST_ARA_S.2016, PhyllosphereAbundance=ST_ARA_P.2016)
+ST_Occ_plotdata.2016 <- data.frame(OTU=row.names(plant_both_taxa.2016), SoilOccupancy=ST_Occ_Soil.2016, PhyllosphereOccupancy=ST_Occ_Plant.2016)
+ST_Occ_plotdata.2016$test <- .5
+
+ggtern(data=ST_Occ_plotdata.2016,aes(x=SoilOccupancy, y=PhyllosphereOccupancy, z=test)) + 
+  theme_bw()+
+  theme_showarrows() +
+  theme_rotate(180)+
+  geom_point()  + 
+  labs(x="Soil",y="Phyllo",z="test",title="Occupancy - example OTU4; soil=0.157,\n misc=0.769, switch=0.854")+
+  scale_T_continuous(breaks = seq(0,1,0.2), labels = seq(0,1,0.2)) +
+  scale_L_continuous(breaks = seq(0,1,0.2), labels = seq(0,1,0.2)) +
+  scale_R_continuous(breaks = seq(0,1,0.2), labels = seq(0,1,0.2))
+
+
+
+c <- as.data.frame(table(map.plant$sampling_date))
+otu_146 <- otu_rare
+
+otu_500 <- t(rrarefy(t(otu), 500))
+
+otu_1000 <- t(rrarefy(t(otu), 1000))             
+
+otu_5k <- t(rrarefy(t(otu)), 5000)
+             
+otu_10K <- t(rrarefy(t(otu), 10000))
+
+otu_146_10k_Match <- otu_146[,colSums(otu_10K)>9999]
+phyllo_otu_146_10k_Match <- otu_146[,colSums(otu_10K)>9999&map_16S$source=="phyllosphere"]
+
+otu_500_clean <- otu_500[,colSums(otu_500)>499]
+map_500_clean <- map_16S[colSums(otu_500)>499,]
+map_500_clean_phyllo <- map_500_clean[map_500_clean$source=="phyllosphere",]
+otu_500_clean_phyllo <- otu_500_clean[,colnames(otu_500_clean)%in%map_500_clean_phyllo$sequence_name]
+
+d <- as.data.frame(table(map_500_clean_phyllo$sampling_date))
+
+
+otu_1k_Clean <- otu_1000[,colSums(otu_1000)>999]
+map_1k_clean <- map_16S[map_16S$sequence_name%in%colnames(otu_1k_Clean),]
+map_1k_clean_phyllo <- map_1k_clean[map_1k_clean$source=="phyllosphere",]
+otu_1k_Clean_phyllo <- otu_1k_Clean[,colnames(otu_1k_Clean)%in%map_1k_clean_phyllo$sequence_name]
+
+map_1k_clean_phyllo_2016 <- map_1k_clean_phyllo[map_1k_clean_phyllo$Year==2016,]
+Week_2016.df <- data.frame(sampling_date=unique(map_1k_clean_phyllo_2016$sampling_date)[order(unique(map_1k_clean_phyllo_2016$sampling_date))], Week=c(1:9))
+map_1k_clean_phyllo_2016 <- left_join(map_1k_clean_phyllo_2016, Week_2016.df, by="sampling_date")
+
+map_1k_clean_phyllo_2016_noMay <- map_1k_clean_phyllo_2016[map_1k_clean_phyllo_2016$Week>2,]
+
+otu_1k_Clean_phyllo_2016_noMay <- otu_1k_Clean_phyllo[,colnames(otu_1k_Clean_phyllo)%in%map_1k_clean_phyllo_2016_noMay$sequence_name]
+
+otu_1k_Clean_phyllo_2016_noMay.bc <- vegdist(t(otu_1k_Clean_phyllo_2016_noMay), method="bray")
+
+adonis(otu_1k_Clean_phyllo_2016_noMay.bc~map_1k_clean_phyllo_2016_noMay$time_numeric)
+adonis(otu_1k_Clean_phyllo_2016_noMay.bc~map_1k_clean_phyllo_2016_noMay$Week)
+adonis(otu_1k_Clean_phyllo_2016_noMay.bc~map_1k_clean_phyllo_2016_noMay$plant)
+
+
+
+anosim(otu_1k_Clean_phyllo_2016_noMay.bc, map_1k_clean_phyllo_2016_noMay$Week)
+anosim(otu_1k_Clean_phyllo_2016_noMay.bc, map_1k_clean_phyllo_2016_noMay$plant)
+
+
+
+otu_1k_Clean_phyllo.bc <- vegdist(t(otu_1k_Clean_phyllo), method = "bray")
+a <- table(map_1k_clean_phyllo$sampling_date)
+a <- as.data.frame(a)
+
+otu_10K_Clean <- otu_10K[,colSums(otu_10K)>9999]
+phyllo_otu_10K_Clean <- otu_10K[,colSums(otu_10K)>9999&map_16S$source=="phyllosphere"]
+
+
+colnames(otu_146_10k_Match) == colnames(otu_10K_Clean)
+
+otu_10K_Clean.bc <- vegdist(t(otu_10K_Clean), method = "bray")
+otu_146_10k_Match.bc <- vegdist(t(otu_146_10k_Match), method="bray")
+
+phyllo_otu_10K_Clean.bc <- vegdist(t(phyllo_otu_10K_Clean), method = "bray")
+phyllo_otu_146_10k_Match.bc <- vegdist(t(phyllo_otu_146_10k_Match), method="bray")
+
+mantel(otu_10K_Clean.bc, otu_146_10k_Match.bc)
+
+mantel(phyllo_otu_10K_Clean.bc, phyllo_otu_146_10k_Match.bc)
+
+map_10K_Clean <- map_16S[map_16S$sequence_name%in%colnames(otu_10K_Clean),]
+
+map_10K_Clean_phyllo <- map_10K_Clean[map_10K_Clean$source=="phyllosphere",]
+
+b <- as.data.frame(table(map_10K_Clean_phyllo$sampling_date))
+
+
+Summary_rarefaction <- left_join(c,d, by="Var1")
+
+Summary_rarefaction <- left_join(Summary_rarefaction, a, by="Var1")
+Summary_rarefaction <- left_join(Summary_rarefaction, b, by="Var1")
+
+
+colnames(Summary_rarefaction) <- c("Sampling_Date", "146_Reads","500_Reads", "1000_Reads", "10000_Reads")
+write.table(x=Summary_rarefaction, file = "Summary_rarefaction_phyllo.txt", sep="\t", quote=FALSE, row.names = FALSE )
+
+table(map_10K_Clean_phyllo$sampling_Rdate)
+
+adonis(otu_10K_Clean.bc~map_10K_Clean$source)
+anosim(otu_10K_Clean.bc,map_10K_Clean$source)
+
+map_10K_Clean_phyllo_2016 <- map_10K_Clean_phyllo[map_10K_Clean_phyllo$Year==2016,]
+unique(map_10K_Clean_phyllo_2016$sampling_date)[order(unique(map_10K_Clean_phyllo_2016$sampling_date))]
+
+### Histogram of % mitochondria and chloroplasts in 2016 phyllosphere samples
+hist(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="phyllosphere"&map_16S$year==2016])
+range(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="phyllosphere"&map_16S$year==2016])
+
+
+### Histogram of % mitochondria and chloroplasts in 2017 phyllosphere samples
+hist(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="phyllosphere"&map_16S$year==2017])
+range(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="phyllosphere"&map_16S$year==2017])
+
+
+### Histogram of % mitochondria and chloroplasts in 2016 soil samples
+hist(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="soil"&map_16S$year==2016])
+range(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="soil"&map_16S$year==2016])
+
+
+### Histogram of % mitochondria and chloroplasts in 2017 soil samples
+hist(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="soil"&map_16S$year==2017])
+range(((1-(colSums(otu)/colSums(otu_CM)))*100)[map_16S$source=="soil"&map_16S$year==2017])
+
 
 
 
