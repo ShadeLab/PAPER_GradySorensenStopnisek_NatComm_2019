@@ -8,10 +8,10 @@ library(reshape2)
 library(RSQLite)
 library(stringr)
 # Read in OTU table
-otu <- read.table("InputFiles/table_combined_merged_trimmed_otus.txt",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
+otu <- read.table("../../../PAPER_GradySorensenStopnisek_InPrep/R/InputFiles/table_combined_merged_trimmed_otus.txt",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
 
 #Preping the environmental metadata
-glbrc <- dbConnect(SQLite(), dbname="InputFiles/GLBRC_bioenergy_db.db" )
+glbrc <- dbConnect(SQLite(), dbname="../../../PAPER_GradySorensenStopnisek_InPrep/R/InputFiles/GLBRC_bioenergy_db.db" )
 
 #Content of the DB
 dbListTables(glbrc)
@@ -69,7 +69,7 @@ time_numeric <- as.numeric(time)
 map_time <- cbind(map_full, time_numeric)
 
 #adding weather data
-weather <- read.csv('InputFiles/kbs_weather_09212017.csv', encoding = 'UTF-8', na.strings= c("NA", " ", ""))
+weather <- read.csv('../../../PAPER_GradySorensenStopnisek_InPrep/R/InputFiles/kbs_weather_09212017.csv', encoding = 'UTF-8', na.strings= c("NA", " ", ""))
 dim(weather)
 head(weather)
 weather$sampling_date <- as.POSIXct(weather$date, format='%d.%m.%y')
@@ -90,7 +90,7 @@ map_small <- map_16S[map_16S$exclude_from_analysis=="N",]
 
 samples <- colnames(otu)
 # put taxonomy into its own variable
-taxonomy <- read.csv('InputFiles/taxonomy_combined_merged_trimmed_otus.csv', header = T, row.names = 1, na.strings= c("NA", " ", ""))
+taxonomy <- read.csv('../../../PAPER_GradySorensenStopnisek_InPrep/R/InputFiles/taxonomy_combined_merged_trimmed_otus.csv', header = T, row.names = 1, na.strings= c("NA", " ", ""))
 # subset the map to include only those samples we have sequence data
 map_small <- map_small[map_small$sequence_name %in% samples,]
 
@@ -129,7 +129,7 @@ tax_filtered <- tax_short%>%
   mutate(otu = rownames(tax_short)) %>%
   filter(!is.na(Phylum))
 
-silva_bact_only <- read.csv('InputFiles/silva_bacteria_only_glbrc.txt', header=T)
+silva_bact_only <- read.csv('../../../PAPER_GradySorensenStopnisek_InPrep/R/InputFiles/silva_bacteria_only_glbrc.csv', header=T)
 
 keep_otus <- silva_bact_only %>%
   filter(lca_tax_slv != 'Unclassified;') %>%
@@ -205,7 +205,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
+<- <- <- <- <- <-       
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
@@ -234,260 +234,112 @@ library(grid)
 install.packages('egg')
 library(egg)
 
-##################################
+#Adding sampling week property
+map_16S$sampling_week <- 0
+map_16S$sampling_week[map_16S$sampling_date == '2017-05-15 EDT'] <- 1 
+map_16S$sampling_week[map_16S$sampling_date == '2016-05-09 EDT'] <- 1
 
-otu_col <- rep('darkgreen',length(names(otu)))
-otu_col[map_16S$plant == 'switchgrass' & map_16S$source == 'phyllosphere' & map_16S$year==2016] <- 'darkolivegreen3'
-otu_col[map_16S$plant == 'switchgrass' & map_16S$source == 'soil' & map_16S$year==2016] <- 'burlywood'
-otu_col[map_16S$plant == 'miscanthus' & map_16S$source == 'soil' & map_16S$year==2016] <- 'burlywood4'
-otu_col[map_16S$plant == 'switchgrass' & map_16S$source == 'phyllosphere' & map_16S$year==2017] <- 'darkolivegreen1'
-otu_col[map_16S$plant == 'switchgrass' & map_16S$source == 'soil' & map_16S$year==2017] <- 'brown'
+map_16S$sampling_week[map_16S$sampling_date == '2016-05-31 EDT'] <- 2
+map_16S$sampling_week[map_16S$sampling_date == '2017-06-05 EDT'] <- 2 
 
-rarecurve(t(otu), step=1000, label=F, col=otu_col)
+map_16S$sampling_week[map_16S$sampling_date == '2016-06-20 EDT'] <- 3
+map_16S$sampling_week[map_16S$sampling_date == '2017-06-26 EDT'] <- 3
 
-#remove empty species
+map_16S$sampling_week[map_16S$sampling_date == '2016-07-12 EDT'] <- 4 
+map_16S$sampling_week[map_16S$sampling_date == '2017-07-17 EDT'] <- 4
+
+map_16S$sampling_week[map_16S$sampling_date == '2016-08-01 EDT'] <- 5 
+map_16S$sampling_week[map_16S$sampling_date == '2017-08-07 EDT'] <- 5 
+
+map_16S$sampling_week[map_16S$sampling_date == '2016-08-22 EDT'] <- 6 
+map_16S$sampling_week[map_16S$sampling_date == '2017-08-28 EDT'] <- 6 
+
+map_16S$sampling_week[map_16S$sampling_date == '2016-09-12 EDT'] <- 7 
+map_16S$sampling_week[map_16S$sampling_date == '2017-09-18 EDT'] <- 7 
+
+map_16S$sampling_week[map_16S$sampling_date == '2016-10-03 EDT'] <- 8
+
+map_16S$sampling_week[map_16S$sampling_date == '2016-11-07 EST'] <- 9
+
+rownames(tax_filtered) <- as.character(tax_filtered$otu)
+tax_filtered <- tax_filtered[,-8]
+tax_filtered[] = lapply(tax_filtered, blank2na, na.strings=c('','NA','na','N/A','n/a','NaN','nan'))
+lastValue <- function(x) tail(x[!is.na(x)], 1)
+last_taxons<- apply(tax_filtered, 1, lastValue)
+tax_filtered$last_taxon <- last_taxons
+tax_filtered$otu <- rownames(tax_filtered)
+head(tax_filtered)
+tax_filtered$final_names <- paste(tax_filtered$last_taxon, tax_filtered$otu, sep=' - ')
+
+###########################
+#' Venn diagram - Figure S7
+###########################
+#' Subsetting the data to the crop and year
 otu_rare=otu_rare[rowSums(otu_rare)>0,]
 
 misc_otu <- otu_rare[,map_16S$plant=="miscanthus" & (map_16S$source=='phyllosphere')]
-swit16_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year=='2016')]
-swit17_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year=='2017')]
+swit16_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year==2016)]
+swit17_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year==2017)]
 
-misc_otu_soil <- otu[,map_16S$plant=="miscanthus" & (map_16S$source=='soil')]
-swit_otu_soil <- otu[,map_16S$plant=="switchgrass" & (map_16S$source=='soil')]
-
-soil_otu <- otu_rare[,map_16S$source=="soil"] #both soils: switchgrass and miscanthus
-
-phyllo <- otu_rare[,map_16S$source=="phyllosphere"]
-phyllo_otu <- phyllo[rowSums(phyllo)>0,]
-nrow(phyllo_otu)
-rownames(phyllo_otu)
-
-# Venn Analysis of Switchgrass and miscanthus
-#############################################
-
-#Phyllosphere only
 # make presence absence list from soil and plant into 1 & 0
-swit16_otu <- 1*(rowSums(swit16_otu)>0)
-swit17_otu <- 1*(rowSums(swit17_otu)>0)
-misc16_otu <- 1*(rowSums(misc_otu)>0)
+swit16_otu_venn <- 1*(rowSums(swit16_otu)>0)
+swit17_otu_venn<- 1*(rowSums(swit17_otu)>0)
+misc16_otu_venn <- 1*(rowSums(misc_otu)>0)
 
-venn_phyllo_data <- cbind(swit16_otu,swit17_otu, misc16_otu)
+#' plot Venn
+venn_phyllo_data <- cbind(swit16_otu_venn,swit17_otu_venn, misc16_otu_venn)
 colnames(venn_phyllo_data) <- c("Switchgrass 2016", "Switchgrass 2017", "Miscanthus 2016")
 venn_phyllo_data=venn_phyllo_data[rowSums(venn_phyllo_data)>0,]
 v_phyllo=vennCounts(venn_phyllo_data)
 v_phyllo_2=round(v_phyllo[,"Counts"]/sum(v_phyllo[,"Counts"]),2) #calculate percentage of each group
 vennDiagram(v_phyllo, circle.col = c('darkolivegreen3', 'darkolivegreen1','darkgreen'), lwd=6, cex=1.2, scale=F)
 
-#####################################
-####Contextual data plotting
-#####################################
-
-#Weather report
-ggplot(weather[weather$Year == 2016 & weather$sampling_date>'2016-04-01 EDT' & weather$sampling_date<'2016-11-10 EDT',], 
-       aes(x=sampling_date, y=precipitation))+
-  geom_vline(xintercept = c(unique(map_time$sampling_date)),linetype="dashed") +
-  geom_point(aes(y=RH), colour='blue', size=.8) +
-  geom_point(aes(y=Air_temp_mean), colour='red', size=.8) +
-  geom_point() +
-  labs(y='Precipitation (mm) - black;\nMean temperature (°C)- red;\nRelative humidity (%) - blue', x='Date')
-ggsave('Figures/weather_report.eps', height=4, width=5)
-
-#Contextual data analysis
-treat_colors <- rep("green", length(map_16S))
-treat_colors[map_16S$treatment=="standard fertilization"]<-"black"
-
-#Switchgrass
-par(mfrow=c(2,2))
-plot(map_16S$sampling_date[map_16S$source=='phyllosphere' & map_16S$plant=='switchgrass'], map_16S$height_mean_cm[map_16S$source=='phyllosphere' & map_16S$plant=='switchgrass'], 
-     ylab='Plant mean height (cm)',
-     xlab=NA,
-     main= 'Switchgrass - plant',
-     col=treat_colors)
-legend('bottomright', col=c('green', 'black'), legend=c('N-free', 'N'), bty='n', pch=21, title='Treatment')
-plot(map_16S$sampling_date[map_16S$source=='phyllosphere' & map_16S$plant=='switchgrass'], map_16S$carbon_per_nitrogen[map_16S$source=='phyllosphere' & map_16S$plant=='switchgrass'], 
-     ylab='Leaf CN ratio',
-     xlab=NA,
-     main= 'Switchgrass - plant',
-     col=treat_colors)
-plot(map_16S$sampling_date[map_16S$source=='soil' & map_16S$plant=='switchgrass'], map_16S$NO3N_ppm[map_16S$source=='soil' & map_16S$plant=='switchgrass'], 
-     ylab='Soil NO3-N (ppm)',
-     xlab='Sampling date (Month)',
-     main= 'Switchgrass - soil',
-     col=treat_colors)
-plot(map_16S$sampling_date[map_16S$source=='soil' & map_16S$plant=='switchgrass'], map_16S$organic_matter[map_16S$source=='soil' & map_16S$plant=='switchgrass'], 
-     ylab='Soil organic matter (ppm)',
-     xlab='Sampling date (Month)',
-     main= 'Switchgrass - soil',
-     col=treat_colors)
-
-#Miscanthus
-par(mfrow=c(2,2))
-plot(map_16S$sampling_date[map_16S$source=='phyllosphere' & map_16S$plant=='miscanthus'], map_16S$height_mean_cm[map_16S$source=='phyllosphere' & map_16S$plant=='miscanthus'], 
-     ylab='Plant mean height (cm)',
-     xlab=NA,
-     main= 'Miscanthus - plant',
-     col=treat_colors)
-legend('bottomright', col=c('green', 'black'), legend=c('N-free', 'N'), bty='n', pch=21, title='Treatment')
-plot(map_16S$sampling_date[map_16S$source=='phyllosphere' & map_16S$plant=='miscanthus'], map_16S$carbon_per_nitrogen[map_16S$source=='phyllosphere' & map_16S$plant=='miscanthus'], 
-     ylab='Leaf CN ratio',
-     xlab=NA,
-     main= 'Miscanthus - plant',
-     col=treat_colors)
-plot(map_16S$sampling_date[map_16S$source=='soil' & map_16S$plant=='miscanthus'], map_16S$NO3N_ppm[map_16S$source=='soil' & map_16S$plant=='miscanthus'], 
-     ylab='Soil NO3-N (ppm)',
-     xlab='Sampling date (Month)',
-     main= 'Miscanthus - soil',
-     col=treat_colors)
-plot(map_16S$sampling_date[map_16S$source=='soil' & map_16S$plant=='miscanthus'], map_16S$organic_matter[map_16S$source=='soil' & map_16S$plant=='miscanthus'], 
-     ylab='Soil organic matter (ppm)',
-     xlab='Sampling date (Month)',
-     main= 'Miscanthus - soil',
-     col=treat_colors)
-
-par(mfrow=c(1,1))
-
-# #Using Occupancy data to retrieve OTUs with most frequent/common observations (found in more than 80% of samples)
-# #Example for switchgrass
-# names(Occ_swit)
-# 
-# occ_swit_df<- data.frame(otu=names(Occ_swit), occ=Occ_swit) %>% filter(occ > .4)
-# abund_otu_switch <- data.frame(otu=names(Mean_abund_swit), abund=log(Mean_abund_swit)) %>% filter(abund > -6)
-# switch_occ_abund <- full_join(occ_swit_df, abund_otu_switch)
-# 
-# occ_misc_df<- data.frame(otu=names(Occ_misc), occ_misc=Occ_misc) %>% filter(occ_misc > .4)
-# abund_otu_misc <- data.frame(otu=names(Mean_abund_misc), abund_misc=log(Mean_abund_misc)) %>% filter(abund_misc > -6)
-# misc_occ_abund <- full_join(occ_misc_df, abund_otu_misc)
-# 
-# phyllo_occ_abund <- full_join(switch_occ_abund, misc_occ_abund)
-# 
-# occ_swit_df$otu <- as.character(occ_swit_df$otu)
-# 
-# rel_otu_rare <- decostand(otu_rare, method="total", MARGIN=2)
-# 
-# occ_rel_otu_rare <- rel_otu_rare[rownames(rel_otu_rare) %in% occ_swit_df$otu,]
-# occ_rel_otu_rare[5,]
-# 
-# tax_occ <- taxonomy[as.numeric(occ_swit_df$otu)]
-
-# ########################################################
-# #Heatmap using relative abundance data (rarefied counts)
-# ########################################################
-# #Switchgrass
-# swit_otu_rel_presence=swit_otu_rel[rowSums(swit_otu_rel)>0,]
-# 
-# # determine the maximum relative abundance for each column
-# maxab <- apply(swit_otu_rel_presence, 1, max)
-# head(maxab)
-# 
-# # remove the genera with less than .001% as their maximum relative abundance
-# n1 <- names(which(maxab < 0.01))
-# swit_otu_rel.001 <- swit_otu_rel_presence[-which(rownames(swit_otu_rel_presence) %in% n1),]
-# dim(swit_otu_rel_presence)
-# 
-# scaleyellowred <- colorRampPalette(c("white", "black"), space = "rgb")(100)
-# 
-# # calculate the Bray-Curtis dissimilarity matrix on the full dataset:
-# data.dist_col <- vegdist(t(swit_otu_rel), method = "bray")
-# data.dist_row <- vegdist(swit_otu_rel.001, method = "bray")
-# # Do average linkage hierarchical clustering 
-# cl.clus <- hclust(data.dist_col, "aver")
-# row.clus <- hclust(data.dist_row, "aver")
-# 
-# # make the heatmap
-# #pdf("switchgrass_heatmap.pdf", height = 7, width = 7)
-# heatmap(as.matrix(swit_otu_rel.001), 
-#         Colv = as.dendrogram(cl.clus), 
-#         Rowv = as.dendrogram(row.clus), 
-#         col = scaleyellowred, 
-#         margins = c(10, 3),
-#         main='Switchgrass OTU relative anundance'
-# )
-# #dev.off()
-# 
-# #Miscanthus
-# # determine the maximum relative abundance for each column
-# maxab_misc <- apply(misc_otu_rel, 1, max)
-# head(maxab_misc)
-# 
-# # remove the genera with less than .001% as their maximum relative abundance
-# n1_misc <- names(which(maxab_misc < 0.01))
-# misc_otu_rel.001 <- misc_otu_rel[-which(rownames(misc_otu_rel) %in% n1_misc),]
-# dim(misc_otu_rel.001)
-# 
-# # calculate the Bray-Curtis dissimilarity matrix on the full dataset:
-# data.dist_col_misc <- vegdist(t(misc_otu_rel), method = "bray")
-# data.dist_row_misc <- vegdist(misc_otu_rel.001, method = "bray")
-# 
-# # Do average linkage hierarchical clustering 
-# cl.clus_misc <- hclust(data.dist_col_misc, method = "complete")
-# row.clus_misc <- hclust(data.dist_row_misc, "average")
-# 
-# # make the heatmap with Rowv = as.dendrogram(row.clus)
-# #pdf('miscanthus_heatmap.pdf', width = 7, height = 8)
-# heatmap(as.matrix(misc_otu_rel.001), 
-#         Colv = as.dendrogram(cl.clus_misc), 
-#         Rowv = as.dendrogram(row.clus_misc), 
-#         col = scaleyellowred, 
-#         margins = c(10, 3),
-#         main='Miscanthus OTU relative anundance')
-# #dev.off()
-
-# #************************************************************************************************************************************
-# #Replotting the Occ_Abund data - using occupancy and relative abundance only. Also, use coler coding for unique OTUs and shared OTUs. 
-# #Mark the quadrant used for the analysis - occ>.4 and rel abund > log10>-2.5
-# #************************************************************************************************************************************
-# 
-#####2016 and 2017 data separated
-swit_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year==2016)]
-swit_otu_17 <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='phyllosphere') & (map_16S$year==2017)]
+#############################
+#Occupancy abundance analysis
+#############################
 
 #Comulative Occ_Abund
-#2016 data
-swit_otu_PA <- 1*((swit_otu>0)==1)
+#Switch 2016 
+swit16_otu <- swit16_otu[rowSums(swit16_otu)>0,]
+swit_otu_PA <- 1*((swit16_otu>0)==1)
 swit_otu_PA <- swit_otu_PA[rowSums(swit_otu_PA)>0,]
-Occ_swit <- rowSums(swit16_otu_PA)/ncol(swit_otu_PA)
-swit_otu <- swit_otu[rowSums(swit_otu)>0,]
-swit_otu_rel <- decostand(swit_otu, method="total", MARGIN=2)
-com_abund_swit <- rowSums(swit_otu_rel)
-
-#2017 data
-swit17_otu_PA <- 1*((swit_otu_17>0)==1)
-swit17_otu_PA <- swit17_otu_PA[rowSums(swit17_otu_PA)>0,]
-Occ_swit17 <- rowSums(swit17_otu_PA)/ncol(swit17_otu_PA)
-swit17_otu <- swit_otu_17[rowSums(swit_otu_17)>0,]
-swit17_otu_rel <- decostand(swit17_otu, method="total", MARGIN=2)
-com_abund_swit17 <- rowSums(swit17_otu_rel)
-#nrow(swit17_otu)
-
-#Miscanthus Occ_Abund
-misc_otu <- misc_otu[rowSums(misc_otu)>0,]
-misc_otu_PA <- 1*((misc_otu>0)==1)
-misc_otu_PA <- misc_otu_PA[rowSums(misc_otu)>0,]
-Occ_misc <- rowSums(misc_otu_PA)/ncol(misc_otu_PA)
-misc_otu_rel <- decostand(misc_otu, method="total", MARGIN=2)
-com_abund_misc <- rowSums(misc_otu_rel)
-
-color_misc_top <- com_abund_misc
-color_misc_top[] <- 'black' 
-
-#Mean Occ_Abund
-#Switch 2016
-swit_otu_PA <- swit_otu_PA[rowSums(swit_otu_PA)>0,]
-Mean_swit_otu_PA <- apply(swit_otu_PA, 1, mean)
-Mean_Occ_swit <- rowSums(swit_otu_PA)/ncol(swit_otu_PA)
-swit_otu <- swit_otu[rowSums(swit_otu)>0,]
-swit_otu_rel <- decostand(swit_otu, method="total", MARGIN=2)
+Occ_swit <- rowSums(swit_otu_PA)/ncol(swit_otu_PA)
+swit_otu_rel <- decostand(swit16_otu, method="total", MARGIN=2)
 Mean_abund_swit <- apply(swit_otu_rel, 1, mean)
 
-#2017
-swit17_otu <- swit_otu_17[rowSums(swit_otu_17)>0,]
+#Creating df for plotting with ggplot and adding color code for the shared and unique OTUs
+com_abund_swit <- rowSums(swit_otu_rel)
+color_swit_top <- com_abund_swit
+color_swit_top[] <- 'black'
+
+swit_df_occ <- data.frame(otu=names(Occ_swit), occ=Occ_swit) 
+swit_df_abun <- data.frame(otu=names(Mean_abund_swit), abun=log10(Mean_abund_swit))
+switc_col <- data.frame(otu=names(color_swit_top), col=color_swit_top)
+swit_occ_abun <- left_join(swit_df_abun, swit_df_occ, by='otu')
+swit_occ_abun <- left_join(swit_occ_abun, switc_col, by='otu')
+
+#Switch 2017 
+swit17_otu <- swit17_otu[rowSums(swit17_otu)>0,]
+swit17_otu_PA <- 1*((swit17_otu>0)==1)
 swit17_otu_PA <- swit17_otu_PA[rowSums(swit17_otu_PA)>0,]
 Mean_swit17_otu_PA <- apply(swit17_otu_PA, 1, mean)
-Mean_Occ_swit17 <- rowSums(swit17_otu_PA)/ncol(swit17_otu_PA)
+Occ_swit17 <- rowSums(swit17_otu_PA)/ncol(swit17_otu_PA)
 swit17_otu_rel <- decostand(swit17_otu, method="total", MARGIN=2)
 Mean_abund_swit17 <- apply(swit17_otu_rel, 1, mean)
 
-#Miscanthus Occ_Abund
+#Creating df for plotting with ggplot and adding color code for the shared and unique OTUs
+com_abund_swit17 <- rowSums(swit17_otu_rel)
+color_swit17_top <- com_abund_swit17
+color_swit17_top[] <- 'black'
+
+swit17_df_occ <- data.frame(otu=names(Occ_swit17), occ=Occ_swit17) 
+swit17_df_abun <- data.frame(otu=names(Mean_abund_swit17), abun=log10(Mean_abund_swit17))
+switc17_col <- data.frame(otu=names(color_swit17_top), col=color_swit17_top)
+swit17_occ_abun <- left_join(swit17_df_abun, swit17_df_occ, by='otu')
+swit17_occ_abun <- left_join(swit17_occ_abun, switc17_col, by='otu')
+
+#Miscanthus 2016
+misc_otu <- misc_otu[rowSums(misc_otu)>0,]
 misc_otu_PA <- 1*((misc_otu>0)==1)
 misc_otu_PA <- misc_otu_PA[rowSums(misc_otu)>0,]
 Occ_misc <- rowSums(misc_otu_PA)/ncol(misc_otu_PA)
@@ -496,201 +348,285 @@ misc_otu_rel <- decostand(misc_otu, method="total", MARGIN=2)
 Mean_abund_misc <- apply(misc_otu_rel, 1, mean)
 
 #Creating df for plotting with ggplot and adding color code for the shared and unique OTUs
-swit_df_occ <- data.frame(otu=names(Mean_Occ_swit), occ=Mean_Occ_swit) 
-swit_df_abun <- data.frame(otu=names(Mean_abund_swit), abun=log10(Mean_abund_swit))
-switc_col <- data.frame(otu=names(color_swit_top), col=color_swit_top)
-swit_occ_abun <- left_join(swit_df_abun, swit_df_occ, by='otu')
-swit_occ_abun <- left_join(swit_occ_abun, switc_col, by='otu')
-swit_occ_abun$unique <- 'shared'
-
-swit17_df_occ <- data.frame(otu=names(Mean_Occ_swit17), occ=Mean_Occ_swit17) 
-swit17_df_abun <- data.frame(otu=names(Mean_abund_swit17), abun=log10(Mean_abund_swit17))
-switc17_col <- data.frame(otu=names(color_swit17_top), col=color_swit17_top)
-swit17_occ_abun <- left_join(swit17_df_abun, swit17_df_occ, by='otu')
-swit17_occ_abun <- left_join(swit17_occ_abun, switc17_col, by='otu')
-swit17_occ_abun$unique <- 'shared'
+com_abund_misc <- rowSums(misc_otu_rel)
+color_misc_top <- com_abund_misc
+color_misc_top[] <- 'black' 
 
 misc_df_occ <- data.frame(otu=names(Occ_misc), occ=Occ_misc) 
 misc_df_abun <- data.frame(otu=names(Mean_abund_misc), abun=log10(Mean_abund_misc))
 misc_col <- data.frame(otu=names(color_misc_top), col=color_misc_top)
 misc_occ_abun <- left_join(misc_df_abun, misc_df_occ, by='otu')
 misc_occ_abun <- left_join(misc_occ_abun, misc_col, by='otu')
-misc_occ_abun$unique <- 'shared'
 
+#' Creating a lsts of shared taxa
 shared_v1 <- swit_occ_abun$otu[swit_occ_abun$otu %in% misc_occ_abun$otu]
 shared <- shared_v1[shared_v1 %in% swit17_occ_abun$otu] 
-shared_season_switch <- swit_occ_abun$otu[swit_occ_abun$otu %in% swit17_occ_abun$otu] #187 shared between the 2016-2017 (298 OTUs total in 2017)
-
+shared_season_switch <- swit_occ_abun$otu[swit_occ_abun$otu %in% swit17_occ_abun$otu] 
 shared_season_switch_only <- shared_season_switch[!(shared_season_switch %in% shared)]
 
-#swit_occ_abun$unique[swit_occ_abun$otu %in% shared] <- 'shared (n=144)'
-swit_occ_abun$unique[!(swit_occ_abun$otu %in% shared_season_switch)] <- 'Switchgrass 2016 (n=563)'
-#swit_occ_abun$unique[swit_occ_abun$otu %in% shared_season_switch_only] <- '2016-2017 (n=43)'
+##################################################################################
+#Determining the core by the taxa contribution to the community structure varience
+##################################################################################
+sw <- swit16_otu
+sw17<- swit17_otu
+mis <- misc_otu
 
-misc_occ_abun$unique[!(misc_occ_abun$otu %in% shared)] <- 'Miscanthus 2016 (n=486)' 
+#Calculating OTU presence within the time points and presence in consecutive time points for each dataset
+PresenceSum <- data.frame(otu = as.factor(row.names(sw)), sw) %>% 
+  gather(sequence_name, abun, -otu) %>%
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year')], by = 'sequence_name') %>%
+  mutate(time_points=length(unique(sampling_date))) %>%
+  group_by(sampling_date, otu, time_points) %>%
+  summarise(date_presence=sum(abun>0)/length(abun),
+            all_reps=length(abun),
+            detect=ifelse(date_presence > 0, 1, 0)) %>%
+  group_by(otu) %>%
+  summarise(no_times=sum(detect),
+            meanRep=mean(date_presence),
+            Index=no_times*meanRep)
 
-#swit17_occ_abun$unique[swit17_occ_abun$otu %in% shared] <- 'shared (n=144)'
-swit17_occ_abun$unique[!(swit17_occ_abun$otu %in% shared_season_switch)] <- 'Switchgrass 2017 (n=111)'
-#swit17_occ_abun$unique[swit17_occ_abun$otu %in% shared_season_switch_only] <- '2016-2017 (n=43)'
+PresenceSum_sw17 <- data.frame(otu = as.factor(row.names(sw17)), sw17) %>% 
+  gather(sequence_name, abun, -otu) %>%
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year')], by = 'sequence_name') %>%
+  mutate(time_points=length(unique(sampling_date))) %>%
+  group_by(sampling_date, otu, time_points) %>%
+  summarise(date_presence=sum(abun>0)/length(abun),
+            all_reps=length(abun),
+            detect=ifelse(date_presence > 0, 1, 0)) %>%
+  group_by(otu) %>%
+  summarise(no_times=sum(detect),
+            meanRep=mean(date_presence),
+            Index=no_times*meanRep)
 
+PresenceSum_mi <- data.frame(otu = as.factor(row.names(mis)), mis) %>% 
+  gather(sequence_name, abun, -otu) %>%
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year')], by = 'sequence_name') %>%
+  mutate(time_points=length(unique(sampling_date))) %>%
+  group_by(sampling_date, otu, time_points) %>%
+  summarise(date_presence=sum(abun>0)/length(abun),
+            all_reps=length(abun),
+            detect=ifelse(date_presence > 0, 1, 0)) %>%
+  group_by(otu) %>%
+  summarise(no_times=sum(detect),
+            meanRep=mean(date_presence),
+            Index=no_times*meanRep)
 
-#####################################
-#Figure 3A - Occupancy abundance plot
-#####################################
+#' Creating OTU rankes by their abundacne and  weighted occupancy 
+sw_ranked <- swit_occ_abun %>%
+  left_join(PresenceSum, by='otu') %>%
+  transmute(rank=(abun) + (occ*Index),
+            otu=otu) %>%
+  arrange(desc(rank))
+sw_ranked$otu <- as.character(sw_ranked$otu) 
 
-FigA<- ggplot(data=swit_occ_abun, aes(x=abun, y=occ, fill=unique)) +
-  theme_bw()+
-  geom_point(size=3, pch=21, alpha=.5) +
-  scale_fill_manual(breaks=unique, values=c('white','darkolivegreen3')) +
-  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(swit_df_abun),'OTUs)',sep=' '), y=paste('Mean occupancy (n=',ncol(swit_otu_PA),')', sep=' '), title='A', fill=NULL) +
-  geom_text_repel(data=swit_occ_abun[swit_occ_abun$otu %in% shared_otus$otu,], aes(label=otu), box.padding = unit(0.45, "lines")) +
-  geom_segment(aes(x = -2.5, y = .4, xend = -2.5, yend = Inf), linetype= 'dashed') +
-  geom_segment(aes(x = -2.5, y = .4, yend = .4, xend = Inf), linetype= 'dashed') +
-  theme(legend.position = 'right',
-        legend.background = element_rect(fill=alpha(0.1))) +
-  scale_y_continuous(breaks=seq(0,1,.2)) +
-  xlim(-4,-0.5) +
-  guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = 'Figures/switchgrass_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
+#' Calculating the B-C 
+BCswAddition <- c()
 
-FigB <- ggplot(data=swit17_occ_abun, aes(x=abun, y=occ, fill=unique)) +
-  theme_bw()+
-  geom_point(size=3, pch=21, alpha=.5) +
-  scale_fill_manual(breaks=unique, values=c('white', 'darkolivegreen1')) +
-  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(swit17_occ_abun),' OTUs)',sep=''), y=paste('Mean occupancy (n=',ncol(swit17_otu_PA),')', sep=''), title='B', fill=NULL) +
-  geom_text_repel(data=swit17_occ_abun[swit17_occ_abun$otu %in% shared_otus$otu,], aes(label=otu), box.padding = unit(0.45, "lines")) +
-  geom_segment(aes(x = -2.5, y = .4, xend = -2.5, yend = Inf), linetype= 'dashed') +
-  geom_segment(aes(x = -2.5, y = .4, yend = .4, xend = Inf), linetype= 'dashed') +
-  theme(legend.position = 'right',
-        legend.background = element_rect(fill=alpha(0.1))) +
-  xlim(-4,-0.5) +
-  scale_y_continuous(breaks=seq(0,1,.2)) +
-  #scale_x_continuous(breaks=seq(-4,0,1)) +
-  guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = 'Figures/switchgrass_occ_abund_2017.pdf', device = 'pdf', width = 6.5, height = 4)
+for(i in sw_ranked$otu){
+  otu_start=sw_ranked$otu[1]
+  start_matrix <- as.matrix(sw[otu_start,])
+  start_matrix <- t(start_matrix)
+  x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]- start_matrix[,x[2]]))/2000)
+  x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+  df_s <- data.frame(x_names,x)
+  names(df_s)[2] <- 1 
+  BCswAddition <- rbind(BCswAddition,df_s)
+  
+  for(i in 2:length(sw_ranked$otu)){
+    otu_add=sw_ranked$otu[i]
+    add_matrix <- as.matrix(sw[otu_add,])
+    add_matrix <- t(add_matrix)
+    start_matrix <- rbind(start_matrix, add_matrix)
+    x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]-start_matrix[,x[2]]))/2000)
+    x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+    df <- data.frame(x_names,x)
+    names(df)[2] <- i 
+    BCswAddition <- left_join(BCswAddition, df, by=c('x_names'))
+  }
+}
 
-FigC <- ggplot(data=misc_occ_abun, aes(x=abun, y=occ, fill=unique)) +
-  theme_bw()+
-  geom_point(size=3, pch=21, alpha=.5) +
-  scale_fill_manual(breaks=unique, values=c('darkgreen', 'white')) +
-  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(misc_df_abun),' OTUs)',sep=''), y=paste('Mean occupancy (n=',ncol(misc_otu_PA),')', sep=''), title='C', fill=NULL) +
-  geom_text_repel(data=misc_occ_abun[misc_occ_abun$otu %in% shared_otus$otu,], aes(label=otu), box.padding = unit(0.45, "lines")) +
-  geom_segment(aes(x = -2.5, y = .4, xend = -2.5, yend = Inf), linetype= 'dashed') +
-  geom_segment(aes(x = -2.5, y = .4, yend = .4, xend = Inf), linetype= 'dashed') +
-  theme(legend.position = 'right',
-        legend.background = element_rect(fill=alpha(0.1))) +
-  scale_y_continuous(breaks=seq(0,1,.2)) +
-  xlim(-4,-0.5) +
-  guides(fill = guide_legend(override.aes = list(alpha = 1)))
-ggsave(filename = 'Figures/miscanthus_occ_abund_2016.pdf', device = 'pdf', width = 6.5, height = 4)
+rownames(BCswAddition) <- BCswAddition$x_names
+temp_BC <- BCswAddition
+temp_BC$x_names <- NULL
+temp_BC_matrix <- as.matrix(temp_BC)
 
-###Venn diagram for comparing the datasets
-install.packages('VennDiagram')
-library(VennDiagram)
-grid.newpage()
-venn_plot <- draw.triple.venn(area1 = 750, area2 = 298,area3= 630, n12 = 187, n23 = 164, n13 = 301, n123 = 144, 
-                              fill= c('darkolivegreen3', 'darkolivegreen1','darkgreen'),
-                              category = c('A', 'B', 'C'))
+plot_BC_ranked <- data.frame(rank = as.factor(row.names(t(temp_BC_matrix))),t(temp_BC_matrix)) %>% 
+  gather(comparison, BC, -rank) %>%
+  group_by(rank) %>%
+  summarise(MeanBC=mean(BC)) %>%
+  arrange(-desc(MeanBC)) %>%
+  mutate(proportionBC=MeanBC/max(MeanBC))
 
+Increase=plot_BC_ranked$MeanBC[-1]/plot_BC_ranked$MeanBC[-length(plot_BC_ranked$MeanBC)]
+increaseDF <- data.frame(IncreaseBC=c(0,(Increase)), rank=factor(c(1:(length(Increase)+1))))
+plot_BC_ranked <- left_join(plot_BC_ranked, increaseDF)
 
+BC_plot <- ggplot(plot_BC_ranked[1:75,], aes(x=factor(plot_BC_ranked$rank[1:75], levels=plot_BC_ranked$rank[1:75]))) +
+  geom_histogram(aes(y=IncreaseBC/5), stat='identity', col='darkolivegreen3', fill='darkolivegreen3', cex=1, alpha=.2) +
+  geom_point(aes(y=MeanBC)) +
+  labs(x=NULL, y='Mean Bray-Curtis distance') +
+  theme_classic() + theme(strip.background = element_blank(),axis.text.x = element_text(size=7, angle=45)) +
+  ylim(0,.57) +
+  geom_vline(xintercept=c(37.5), lty=3, col='red', cex=.5) +
+  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Increase in Bray-Curtis distance between points")) +
+  
+  theme_classic() + theme(strip.background = element_blank(), 
+                          axis.text.x = element_text(size=7, angle=45))
 
+sw_core_OTUs <- sw_ranked$otu[1:37]
 
-#collecting all the presence/absence data for each rep plot
-#Collecting the OTUs that fall in the marked quadrant in the Occ_Abund plots
-occ_swit_df <- data.frame(otu=names(Mean_Occ_swit), occ_2016=Mean_Occ_swit) %>% filter(occ_2016 > .4)
-abund_otu_switch <- data.frame(otu=names(Mean_abund_swit), abun_2016=log10(Mean_abund_swit)) %>% filter(abun_2016 > -2.5)
-switch_occ_abund <- full_join(occ_swit_df, abund_otu_switch)
-swit_uniq_otu <- swit_occ_abun[swit_occ_abun$otu %in% switch_occ_abund$otu,]
-switch_occ_abund_v2 <- left_join(switch_occ_abund, swit_uniq_otu, by='otu')
-switch_occ_abund_v2 <- switch_occ_abund_v2[,-c(4,5,6)]
-names(switch_occ_abund_v2)[4] <- 'unique_swit_2016'
+#Switchgrass 2017
+#' Creating OTU rankes by their abundacne and  weighted occupancy
+sw17_ranked <- swit17_occ_abun %>%
+  left_join(PresenceSum_sw17, by='otu') %>%
+  transmute(rank=(abun) + occ*Index,
+            otu=otu) %>%
+  arrange(desc(rank))
+sw17_ranked$otu <- as.character(sw17_ranked$otu) 
 
-occ_swit17_df <- data.frame(otu=names(Mean_Occ_swit17), occ_2017=Mean_Occ_swit17) %>% filter(occ_2017 > .4)
-abund_otu_switch17 <- data.frame(otu=names(Mean_abund_swit17), abun_2017=log10(Mean_abund_swit17)) %>% filter(abun_2017 > -2.5)
-switch17_occ_abund <- full_join(occ_swit17_df, abund_otu_switch17)
-swit17_uniq_otu <- swit17_occ_abun[swit17_occ_abun$otu %in% switch17_occ_abund$otu,]
-switch17_occ_abund_v2 <- left_join(switch17_occ_abund, swit17_uniq_otu, by='otu')
-switch17_occ_abund_v2 <- switch17_occ_abund_v2[,-c(4,5,6)]
-names(switch17_occ_abund_v2)[4] <- 'unique_swit_2017'
+BCswAddition <- c()
+for(i in sw17_ranked$otu){
+  otu_start=sw17_ranked$otu[1]
+  start_matrix <- as.matrix(sw17[otu_start,])
+  start_matrix <- t(start_matrix)
+  x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]- start_matrix[,x[2]]))/2000)
+  x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+  df_s <- data.frame(x_names,x)
+  names(df_s)[2] <- 1 
+  BCswAddition <- rbind(BCswAddition,df_s)
+  
+  for(i in 2:length(sw17_ranked$otu)){
+    otu_add=sw17_ranked$otu[i]
+    add_matrix <- as.matrix(sw17[otu_add,])
+    add_matrix <- t(add_matrix)
+    start_matrix <- rbind(start_matrix, add_matrix)
+    x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]-start_matrix[,x[2]]))/2000)
+    x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+    df <- data.frame(x_names,x)
+    names(df)[2] <- i 
+    BCswAddition <- left_join(BCswAddition, df, by=c('x_names'))
+  }
+}
 
-occ_misc_df<- data.frame(otu=names(Occ_misc), occ_misc=Occ_misc) %>% filter(occ_misc > .4)
-abund_otu_misc <- data.frame(otu=names(Mean_abund_misc), abund_misc=log10(Mean_abund_misc)) %>% filter(abund_misc > -2.5)
-misc_occ_abund <- full_join(occ_misc_df, abund_otu_misc)
-misc_uniq_otu <- misc_occ_abun[misc_occ_abun$otu %in% misc_occ_abund$otu,]
-misc_occ_abund_v2 <- left_join(misc_occ_abund, misc_uniq_otu, by='otu')
-misc_occ_abund_v2 <- misc_occ_abund_v2[,-c(4,5,6)]
-names(misc_occ_abund_v2)[4] <- 'unique_misc_2016'
+rownames(BCswAddition) <- BCswAddition$x_names
+temp_BC <- BCswAddition
+temp_BC$x_names <- NULL
+temp_BC_matrix <- as.matrix(temp_BC)
 
-phyllo_occ_abund <- full_join(switch_occ_abund_v2, misc_occ_abund_v2)
-phyllo_occ_abund <- full_join(phyllo_occ_abund,switch17_occ_abund_v2)
+plot_sw17_BC_ranked <- data.frame(rank = as.factor(row.names(t(temp_BC_matrix))),t(temp_BC_matrix)) %>% 
+  gather(comparison, BC, -rank) %>%
+  group_by(rank) %>%
+  summarise(MeanBC=mean(BC)) %>%
+  arrange(-desc(MeanBC)) %>%
+  mutate(proportionBC=MeanBC/max(MeanBC))
 
-#OTUs shared between the plants:
-phyllo_occ_abund[phyllo_occ_abund=='NA'] <- NA
-shared_otus <- phyllo_occ_abund[complete.cases(phyllo_occ_abund),] #15 OTUs shared between the plants
-dim(shared_otus)
+Increase=plot_sw17_BC_ranked$MeanBC[-1]/plot_sw17_BC_ranked$MeanBC[-length(plot_sw17_BC_ranked$MeanBC)]
+increaseDF <- data.frame(IncreaseBC=c(0,(Increase)), rank=factor(c(1:(length(Increase)+1))))
+plot_sw17_BC_ranked <- left_join(plot_sw17_BC_ranked, increaseDF)
 
-core_switch16 <- swit_occ_abun[swit_occ_abun$abun>-2.5 & swit_occ_abun$occ>.4,]
-core_switch17 <- swit17_occ_abun[swit17_occ_abun$abun>-2.5 & swit17_occ_abun$occ>.4,]
-core_misc <- misc_occ_abun[misc_occ_abun$abun>-2.5 & misc_occ_abun$occ>.4,]
+sw17_BC_plot <- ggplot(plot_sw17_BC_ranked[1:75,],aes(x=factor(plot_sw17_BC_ranked$rank[1:75], levels=plot_sw17_BC_ranked$rank[1:75]))) +
+  geom_histogram(aes(y=IncreaseBC/5), stat='identity', col='darkolivegreen3', fill='white', cex=1) +
+  geom_point(aes(y=MeanBC)) +  
+  labs(x='Ranked OTUs', y=NULL) +
+  theme_classic() + theme(strip.background = element_blank(), 
+                          axis.text.x = element_text(size=7, angle=45))+
+  ylim(0,.57)+
+  geom_vline(xintercept=c(28.5), lty=3, col='red', cex=.5) +
+  scale_y_continuous(sec.axis = sec_axis(~.*5))
 
-#write.table('~/Dropbox/GLBRC_16S/Supplemental/core_switch')
-dim(core_misc)
-length(core_misc$otu[!(core_misc$otu %in% shared_otus$otu)])
+s17_temp <- plot_sw17_BC_ranked[plot_sw17_BC_ranked$IncreaseBC>=1.01,]
+sw17_core_OTUs <- sw17_ranked$otu[1:28]
 
-#Switchgrass 2016 all:
-switch_selected <- swit_occ_abun[swit_occ_abun$abun>-2.5 & swit_occ_abun$occ>.4,] #total 22 OTUs in the quadrant
-#Switchgrass specific:
-switch_spec_selected <- core_switch16[!(core_switch16$otu %in% shared_otus$otu),] #7 OTUs unique to switch
-tax_short[rownames(tax_short) %in% switch_selected$otu,]
+#Miscanthus 2016
+#' Ranking the OTUs by their Occ and Abun' Creating OTU rankes by their abundacne and  weighted occupancy
+mi_ranked <- misc_occ_abun %>%
+  left_join(PresenceSum_mi, by='otu') %>%
+  transmute(rank=(abun) + occ*Index,
+            otu=otu) %>%
+  arrange(desc(rank))
+mi_ranked$otu <- as.character(mi_ranked$otu) 
 
-#Switchgrass 2017 all:
-switch17_selected <- swit17_occ_abun[swit17_occ_abun$abun>-2.5 & swit17_occ_abun$occ>.4,] #total 25 OTUs in the quadrant
-#Switchgrass specific:
-switch17_spec_selected <- core_switch17[!(core_switch17$otu %in% shared_otus$otu),] #10 OTUs unique to switch17
-tax_short[rownames(tax_short) %in% switch17_selected$otu,]
+BCswAddition <- c()
+for(i in mi_ranked$otu){
+  otu_start=mi_ranked$otu[1]
+  start_matrix <- as.matrix(mis[otu_start,])
+  start_matrix <- t(start_matrix)
+  x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]- start_matrix[,x[2]]))/2000)
+  x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+  df_s <- data.frame(x_names,x)
+  names(df_s)[2] <- 1 
+  BCswAddition <- rbind(BCswAddition,df_s)
+  
+  for(i in 2:length(mi_ranked$otu)){
+    otu_add=mi_ranked$otu[i]
+    add_matrix <- as.matrix(mis[otu_add,])
+    add_matrix <- t(add_matrix)
+    start_matrix <- rbind(start_matrix, add_matrix)
+    x <- apply(combn(ncol(start_matrix), 2), 2, function(x) sum(abs(start_matrix[,x[1]]-start_matrix[,x[2]]))/2000)
+    x_names <- apply(combn(ncol(start_matrix), 2), 2, function(x) paste(colnames(start_matrix)[x], collapse=' - '))
+    df <- data.frame(x_names,x)
+    names(df)[2] <- i 
+    BCswAddition <- left_join(BCswAddition, df, by=c('x_names'))
+  }
+}
 
-#Miscanthus all:
-misc_selected <- misc_occ_abun[misc_occ_abun$abun>-2.5 & misc_occ_abun$occ>.4,] # 17 OTUs
-#Miscanthus specific:
-misc_spec_selected <- core_misc[!(core_misc$otu %in% shared_otus$otu),] #6 OTUs
-tax_short[rownames(tax_short) %in% misc_selected$otu,]
+rownames(BCswAddition) <- BCswAddition$x_names
+temp_BC <- BCswAddition
+temp_BC$x_names <- NULL
+temp_BC_matrix <- as.matrix(temp_BC)
 
-combined_selected_otu <- full_join(switch_selected,switch17_selected)
-combined_selected_otu <- full_join(combined_selected_otu,misc_selected)
+plot_mi_BC_ranked <- data.frame(rank = as.factor(row.names(t(temp_BC_matrix))),t(temp_BC_matrix)) %>% 
+  gather(comparison, BC, -rank) %>%
+  group_by(rank) %>%
+  summarise(MeanBC=mean(BC)) %>%
+  arrange(-desc(MeanBC)) %>%
+  mutate(proportionBC=MeanBC/max(MeanBC))
 
-dim(combined_selected_otu)
+Increase=plot_mi_BC_ranked$MeanBC[-1]/plot_mi_BC_ranked$MeanBC[-length(plot_mi_BC_ranked$MeanBC)]
+increaseDF <- data.frame(IncreaseBC=c(0,(Increase)), rank=factor(c(1:(length(Increase)+1))))
+plot_mi_BC_ranked <- left_join(plot_mi_BC_ranked, increaseDF)
 
+mi_BC_plot <- ggplot(plot_mi_BC_ranked[1:75,],aes(x=factor(plot_mi_BC_ranked$rank[1:75], levels=plot_mi_BC_ranked$rank[1:75]))) +
+  geom_histogram(aes(y=IncreaseBC/5), stat='identity', col='darkgreen', fill='darkgreen', alpha=.2) +
+  geom_point(aes(y=MeanBC)) +    labs(x=NULL, y=NULL) +
+  ylim(0,.57)+
+  geom_vline(xintercept=c(26.5), lty=3, col='red', cex=.5)+
+  theme_classic() + theme(strip.background = element_blank(), 
+                          axis.text.x = element_text(size=7, angle=45),
+                          axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  scale_y_continuous(sec.axis = sec_axis(~.*5))
+
+misc_core_OTUs <- mi_ranked$otu[1:26]
+
+#*********************
+# Figure S6
+#*********************
+grid.draw(ggarrange(mi_BC_plot, BC_plot, sw17_BC_plot,nrow = 3))
+
+###################
+#' The core members
+###################
+core_list <- read.csv('../../../../../Desktop/core.csv')
+misc_core_OTUs <- as.character(core_list$otu[core_list$plant=='misc'])
+sw_core_OTUs <- as.character(core_list$otu[core_list$plant=='s16'])
+sw17_core_OTUs <- as.character(core_list$otu[core_list$plant=='s17'])
+
+##################################################################
+#Clustering to determine OTUs belonging to the plant growth stages
+##################################################################
 rel_otu_rare <- decostand(otu_rare, method="total", MARGIN=2)
-abund_selected_all <- rel_otu_rare[rownames(rel_otu_rare) %in% combined_selected_otu$otu,]
-
-abund_selected_all[order(rowSums(abund_selected_all))]
-
-tax_short$otu <- rownames(tax_short)
-
+abund_selected_all <- rel_otu_rare[rownames(rel_otu_rare) %in% as.character(core_list$otu),]
 selected_otus <- data.frame(otu = as.factor(row.names(abund_selected_all)), abund_selected_all) %>% gather(sequence_name, abun, -otu) %>% 
   left_join(map_16S[, c('sequence_name','rep','time_numeric', 'treatment' ,'source', 'plant', 'month', 'sampling_date', 
                         'carbon_per_nitrogen', 'nitrogen_percent', 'carbon_percent', 'year')], by = 'sequence_name') %>%
-  left_join(tax_short, by='otu')
+  left_join(tax_filtered, by='otu')
 
-lastValue <- function(x) tail(x[!is.na(x)], 1)
-last_taxons<- apply(selected_otus, 1, lastValue)
-selected_otus$last_taxon <- last_taxons
-head(selected_otus)
-selected_otus$final_names <- paste(selected_otus$last_taxon, selected_otus$otu, sep=' - ')
-unique(selected_otus$final_names[selected_otus$plant=='switchgrass'])
+selected_otus_switch <- selected_otus[selected_otus$otu %in% sw_core_OTUs,]
+selected_otus_misc <- selected_otus[selected_otus$otu %in% misc_core_OTUs,]
+selected_otus_switch17 <- selected_otus[selected_otus$otu %in% sw17_core_OTUs,]
 
-selected_otus_switch <- selected_otus[selected_otus$otu %in% factor(switch_selected$otu),]
-selected_otus_misc <- selected_otus[selected_otus$otu %in% factor(misc_selected$otu),]
-selected_otus_switch17 <- selected_otus[selected_otus$otu %in% factor(switch17_selected$otu),]
-
-length(unique(selected_otus_switch$otu))
-length(unique(selected_otus_switch17$otu))
-length(unique(selected_otus_misc$otu))
-
-
-##############################################################################
-###Figure 3B - PA data representation for selected OTUs per replicate and time
-##############################################################################
+#Calculating the z score 
+#***********************
 #Switchgrass
 #df with stats for the time points with all replicates and per OTU
 selected_otus_switch %>%
@@ -703,10 +639,6 @@ selected_otus_switch %>%
   ) %>%
   filter(n>0) -> temp
 
-temp %>%
-  group_by(sampling_date) %>%
-  summarise(all_n=unique(all))
-
 #df with stats for the whole dataset per OTU
 selected_otus_switch %>%
   filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2016) %>%
@@ -716,16 +648,15 @@ selected_otus_switch %>%
     all_sd=sd(abun)
   ) -> temp2
 
-swit_selected_otu_list <- unique(selected_otus_switch$otu)
-
 #combining df and calculating the z-score
 z_df <- left_join(temp, temp2)
 z_df %>% arrange(otu) %>%
   mutate(
     z_score=(rep_ab-all_ab)/all_sd
   ) %>%
-  arrange(Class, Family) ->tmp3
+  arrange(Class, Family) -> tmp3
 
+#***************
 #Miscanthus
 #df with stats for the time points with all replicates and per OTU
 selected_otus_misc %>%
@@ -738,10 +669,6 @@ selected_otus_misc %>%
   ) %>%
   filter(n>0) -> temp4
 
-temp4 %>%
-  group_by(sampling_date) %>%
-  summarise(all_n=unique(all))
-
 #df with stats for the whole dataset per OTU
 selected_otus_misc %>%
   filter(source == 'phyllosphere' & plant == 'miscanthus') %>%
@@ -751,8 +678,6 @@ selected_otus_misc %>%
     all_sd=sd(abun)
   ) -> temp5
 
-misc_selected_otu_list <- unique(selected_otus_misc$otu)
-
 #combining df and calculating the z-score
 z_df_misc <- left_join(temp4, temp5)
 z_df_misc %>% arrange(otu) %>%
@@ -761,11 +686,12 @@ z_df_misc %>% arrange(otu) %>%
   ) %>%
   arrange(Class, Family) -> temp6
 
+#*******************
 #Switchgrass 2017
 #OTU mean abundance per sampling time 
 selected_otus_switch17 %>%
   filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017) %>%
-  group_by(sampling_date, final_names, Class, Order, Family, Genus) %>%
+  group_by(sampling_date, otu, Class, Order, Family, Genus) %>%
   dplyr::summarise(n=sum(abun>0)/length(abun),
                    all=length(abun),
                    rep_ab=mean(abun),
@@ -776,595 +702,490 @@ selected_otus_switch17 %>%
 #df with stats for the whole dataset per OTU
 selected_otus_switch17 %>%
   filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017) %>%
-  group_by(final_names) %>%
+  group_by(otu) %>%
   dplyr::summarise(
     all_ab=mean(abun),
     all_sd=sd(abun)
   ) -> temp8
 
-swit17_selected_otu_list <- unique(selected_otus_switch17$otu)
-
 #combining df and calculating the z-score
 z_df <- left_join(temp7, temp8)
-z_df %>% arrange(final_names) %>%
+z_df %>% arrange(otu) %>%
   mutate(
     z_score=(rep_ab-all_ab)/all_sd
   ) %>%
   arrange(Class, Family) -> tmp9
 
-same_across_data <- tmp3[tmp3$final_names %in% temp6$final_names,]
-same_across_data <- same_across_data[same_across_data$final_names %in% tmp9$final_names,]
-unique(same_across_data$otu)
+#Hierarchical clustering of the core taxa
+switch16_core <- tmp3[,c(1,14,11)]
+switch16_core <- as.data.frame(switch16_core)
+switch16_core_wide <- spread(switch16_core, key='sampling_date', value='z_score')
+switch16_core_wide[is.na(switch16_core_wide)] <- 0
+rownames(switch16_core_wide) <- switch16_core_wide$otu
+switch16_core_wide$otu <-  NULL
+set.seed(20)
+clusters_switch16 <- hclust(dist(switch16_core_wide),'complete')
+memb_sw16 <- cutree(clusters_switch16, k=3)
+sw16_dend <- plot(clusters_switch16, main=NULL)
+rect.hclust(clusters_switch16, k=3)
 
-combined_otus_misc <- temp6[temp6$final_names %in% same_across_data$final_names,]
-uniq_misc <- temp6[!(temp6$final_names %in% same_across_data$final_names),]
-length(unique(uniq_misc$final_names))
+switch17_core <- tmp9[,c(1,2,13)]
+switch17_core <- as.data.frame(switch17_core)
+switch17_core_wide <- spread(switch17_core, key='sampling_date', value='z_score')
+switch17_core_wide[is.na(switch17_core_wide)] <- 0
+rownames(switch17_core_wide) <- switch17_core_wide$otu
+switch17_core_wide$final_names <-  NULL
+set.seed(21)
+clusters_switch17 <- hclust(dist(switch17_core_wide),'complete')
+memb_sw17 <- cutree(clusters_switch17, k=3)
+sw17_dend <- plot(clusters_switch17, main=NULL)
+rect.hclust(clusters_switch17, k=3)
 
-combined_otus_switch <- tmp3[tmp3$final_names %in% same_across_data$final_names,] #for switchgrass16 dataset
-uniq_switch <- tmp3[!(tmp3$final_names %in% same_across_data$final_names),]
+misc16_core <- temp6[,c(1,11,14)]
+misc16_core <- as.data.frame(misc16_core)
+misc16_core_wide <- spread(misc16_core, key='sampling_date', value='z_score')
+misc16_core_wide[is.na(misc16_core_wide)] <- 0
+rownames(misc16_core_wide) <- misc16_core_wide$otu
+misc16_core_wide$otu <-  NULL
+set.seed(21)
+clusters_misc16 <- hclust(dist(misc16_core_wide),'complete')
+memb_misc <- cutree(clusters_misc16, k=4)
+misc_dend <- plot(clusters_misc16, main=NULL)
+rect.hclust(clusters_misc16, k=4)
 
-combined_otus_switch17 <- tmp9[tmp9$final_names %in% same_across_data$final_names,] #for switchgrass17 dataset
-uniq_switch17 <- tmp9[!(tmp9$final_names %in% same_across_data$final_names),]
+#*****************************************************
+# Figure S8
+#*****************************************************
+par(mfrow=c(1,3))
+plot(clusters_misc16, main=NULL)
+rect.hclust(clusters_misc16, k=4)
+plot(clusters_switch16, main=NULL)
+rect.hclust(clusters_switch16, k=3)
+plot(clusters_switch17, main=NULL)
+rect.hclust(clusters_switch17, k=3)
 
+par(mfrow=c(1,1))
 
-plot3 <- ggplot(combined_otus_misc,aes(x=factor(sampling_date), y=factor(combined_otus_misc$final_names, levels=rev(unique(combined_otus_misc$final_names))), 
-                                       size=n)) +
+#**************************
+# Occupancy abundance plots
+#**************************
+
+sw16_clusters <- data.frame(memb_sw16)
+sw16_clusters$otu <-  rownames(sw16_clusters)
+sw16_clusters$stage <- 'mid'
+sw16_clusters$stage[sw16_clusters$memb_sw16==3] <- 'early'
+sw16_clusters$stage[sw16_clusters$memb_sw16==2] <- 'late'
+
+sw17_clusters <- data.frame(memb_sw17)
+sw17_clusters$otu <- rownames(sw17_clusters)
+sw17_clusters$stage[sw17_clusters$memb_sw17==2] <- 'mid'
+sw17_clusters$stage[sw17_clusters$memb_sw17==3] <- 'late'
+sw17_clusters$stage[sw17_clusters$memb_sw17==1] <- 'early'
+
+misc_clusters <- data.frame(memb_misc)
+misc_clusters$otu <-rownames(misc_clusters)
+misc_clusters$stage[misc_clusters$memb_misc==2] <- 'early'
+misc_clusters$stage[misc_clusters$memb_misc==3] <- 'mid'
+misc_clusters$stage[misc_clusters$memb_misc==1] <- 'late'
+misc_clusters$stage[misc_clusters$memb_misc==4] <- 'mid'
+
+swit_occ_abun$unique <- 'shared'
+misc_occ_abun$unique <- 'shared'
+swit17_occ_abun$unique <- 'shared'
+
+length(swit_occ_abun$unique[!(swit_occ_abun$otu %in% shared_season_switch)])
+swit_occ_abun$unique[!(swit_occ_abun$otu %in% shared_season_switch)] <- 'Switchgrass 2016 (n=425)'
+swit_occ_abun$unique[(swit_occ_abun$otu %in% sw_core_OTUs)] <- 'Switchgrass 2016 (n=32)'
+swit_occ_abun$unique[swit_occ_abun$otu %in% sw16_clusters$otu[sw16_clusters$stage=='mid']] <- 'mid'
+swit_occ_abun$unique[swit_occ_abun$otu %in% sw16_clusters$otu[sw16_clusters$stage=='late']] <- 'late'
+swit_occ_abun$unique[swit_occ_abun$otu %in% sw16_clusters$otu[sw16_clusters$stage=='early']] <- 'early'
+
+misc_occ_abun$unique[!(misc_occ_abun$otu %in% shared)] <- 'Miscanthus 2016 (n=580)' 
+misc_occ_abun$unique[(misc_occ_abun$otu %in% misc_core_OTUs)] <- 'Core (n=31)'
+misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='mid']] <- 'mid'
+misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='late']] <- 'late'
+misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='early']] <- 'early'
+
+swit17_occ_abun$unique[!(swit17_occ_abun$otu %in% shared_season_switch)] <- 'Switchgrass 2017 (n=349)'
+swit17_occ_abun$unique[(swit17_occ_abun$otu %in% sw17_core_OTUs)] <- 'Core (n=28)'
+swit17_occ_abun$unique[swit17_occ_abun$otu %in% sw17_clusters$otu[sw17_clusters$stage=='mid']] <- 'mid'
+swit17_occ_abun$unique[swit17_occ_abun$otu %in% sw17_clusters$otu[sw17_clusters$stage=='late']] <- 'late'
+swit17_occ_abun$unique[swit17_occ_abun$otu %in% sw17_clusters$otu[sw17_clusters$stage=='early']] <- 'early'
+
+FigA <- ggplot(data=swit_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x=NULL, y= NULL, title='Miscanthus (2016)') +
-  theme(plot.title = element_text(hjust = 0.5, size = 12),
-        axis.text.y = element_text(size=10),
-        axis.text.x=element_blank())
+  geom_point(size=3, pch=21, alpha=.8) +
+  scale_fill_manual(breaks=unique, values=c('red', 'blue', 'grey','white','darkolivegreen3')) +
+  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(swit_df_abun),'OTUs)',sep=' '), y=paste('Mean occupancy (n=',ncol(swit_otu_PA),')', sep=' '), fill=NULL) +
+  theme(legend.position = 'none',
+        legend.background = element_rect(fill=alpha(0.1)),
+        panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_y_continuous(breaks=seq(0,1,.2)) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1)))
 
-plot1 <- ggplot(combined_otus_switch,aes(x=factor(sampling_date), y=factor(combined_otus_switch$final_names, levels=rev(unique(combined_otus_switch$final_names))), 
-                                         size=n)) +
+FigB <- ggplot(data=swit17_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x=NULL, y= NULL, title='Switchgrass (2016)', fill='z-score', size='Occupancy') +
-  theme(plot.title = element_text(hjust = 0.5, size = 12),
-        axis.text.y = element_text(size=10),
-        axis.text.x=element_blank(),
-        legend.position = 'bottom')
+  geom_point(size=3, pch=21, alpha=.8) +
+  scale_fill_manual(breaks=unique, values=c('red', 'blue', 'grey','white', 'darkolivegreen1')) +
+  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(swit17_occ_abun),' OTUs)',sep=''), y=paste('Mean occupancy (n=',ncol(swit17_otu_PA),')', sep=''), fill=NULL) +
+  theme(legend.position = 'none',
+        legend.background = element_rect(fill=alpha(0.1)),
+        panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_y_continuous(breaks=seq(0,1,.2)) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1)))
 
-plot5 <- ggplot(combined_otus_switch17,aes(x=factor(sampling_date), y=factor(combined_otus_switch17$final_names, 
-                                                                             levels=rev(unique(combined_otus_switch17$final_names))), 
-                                           size=n)) +
+FigC <- ggplot(data=misc_occ_abun, aes(x=abun, y=occ, fill=unique)) +
   theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x=NULL, y= NULL, title='Switchgrass (2017)', fill='z-score', size='Occupancy') +
-  theme(plot.title = element_text(hjust = 0.5, size = 12),
-        axis.text.y = element_text(size=10),
-        axis.text.x=element_blank())
+  geom_point(size=3, pch=21, alpha=.8) +
+  scale_fill_manual(breaks=unique, values=c('red', 'blue', 'grey','darkgreen', 'white')) +
+  labs(x=paste('log(mean relative abundace per OTU)\n (n=',nrow(misc_df_abun),' OTUs)',sep=''), y=paste('Mean occupancy (n=',ncol(misc_otu_PA),')', sep=''), fill=NULL) +
+  theme(legend.position = 'none',
+        legend.background = element_rect(fill=alpha(0.1)),
+        panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_y_continuous(breaks=seq(0,1,.2)) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1)))
 
-plot4 <- ggplot(uniq_misc,aes(x=factor(sampling_date), y=factor(uniq_misc$final_names, levels=rev(unique(uniq_misc$final_names))), 
-                              size=n)) +
+grid.arrange(FigA, FigB, FigC, nrow=1)
+
+#---------------------------------------------------
+#Contribution of the core to community dissimilarity
+#---------------------------------------------------
+#switch 2016
+map_16S$sequence_name == colnames(otu_rare)
+switch16full <- otu_rare[,map_16S$plant == 'switchgrass' & map_16S$year == 2016 & map_16S$source == 'phyllosphere']
+switch16full <- switch16full[rowSums(switch16full)>0,]
+switch16core <- switch16full[rownames(switch16full) %in% selected_otus_switch$otu,]
+
+for(i in switch16full){
+  week = c(3:8) 
+  switch16_BC_full <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=switch16full[,colnames(switch16full) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    switch16_BC_full <- rbind(switch16_BC_full,df)
+  }
+}
+
+for(i in switch16core){
+  week = c(3:8) 
+  switch16_BC_core <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=switch16core[,colnames(switch16core) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    switch16_BC_core <- rbind(switch16_BC_core,df)
+  }
+}
+
+diffBC_switch16 <- left_join(switch16_BC_full,switch16_BC_core, by=c('x_names', 'i'))
+diffBC_switch16$diff_BC <- diffBC_switch16$x.y/diffBC_switch16$x.x
+
+#mean(diffBC_switch16$diff_BC)
+
+switch16_BC_plot <- ggplot(diffBC_switch16, aes(x=factor(i), y=diff_BC)) +
+  geom_violin(trim=FALSE,cex=1, color='darkolivegreen3',fill='darkolivegreen3', alpha=.2)+
+  geom_jitter(width=0.1, color='darkolivegreen3')+
+  ylim(0,1)+
   theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x="Sampling times", y= NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust=1, size=12),
-        axis.text.y = element_text(size=10))
+  labs(x=NULL, y=NULL)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), axis.line = element_line(colour = "black"), 
+        axis.text.x = element_blank(), panel.border = element_blank())
+#switch 2017
+switch17full <- otu_rare[,map_16S$plant == 'switchgrass' & map_16S$year == 2017 & map_16S$source == 'phyllosphere']
+switch17full <- switch17full[rowSums(switch17full)>0,]
+switch17core <- switch17full[rownames(switch17full) %in% selected_otus_switch17$otu,]
+#unique(map_16S$sampling_week[map_16S$plant == 'switchgrass' & map_16S$year == 2017 & map_16S$source == 'phyllosphere'])
 
-plot2 <- ggplot(uniq_switch,aes(x=factor(sampling_date), y=factor(uniq_switch$final_names, levels=rev(unique(uniq_switch$final_names))), 
-                                size=n)) +
+for(i in switch17full){
+  week = c(1:7) 
+  switch17_BC_full <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=switch17full[,colnames(switch17full) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    switch17_BC_full <- rbind(switch17_BC_full,df)
+  }
+}
+
+for(i in switch17core){
+  week = c(1:7) 
+  switch17_BC_core <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=switch17core[,colnames(switch17core) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    switch17_BC_core <- rbind(switch17_BC_core,df)
+  }
+}
+
+diffBC_switch17 <- left_join(switch17_BC_full,switch17_BC_core, by=c('x_names', 'i'))
+diffBC_switch17$diff_BC <- diffBC_switch17$x.y/diffBC_switch17$x.x
+mean(diffBC_switch17$diff_BC)
+switch17_BC_plot <- ggplot(diffBC_switch17, aes(x=factor(i), y=diff_BC)) +
+  geom_violin(trim=FALSE,cex=1, color='darkolivegreen3')+
+  geom_jitter(width=0.1, color='darkolivegreen3', pch=21)+
+  ylim(0,1)+
   theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x="Sampling times", y= NULL, fill='z-score', size='Occupancy') +
-  theme(axis.text.y = element_text(size=10),
-        axis.text.x = element_text(angle = 45, hjust=1, size=12))
+  labs(x=NULL, y=NULL) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), axis.line = element_line(colour = "black"), 
+        axis.text.x = element_blank(), panel.border = element_blank()) 
 
-plot6 <- ggplot(uniq_switch17,aes(x=factor(sampling_date), y=factor(uniq_switch17$final_names, levels=rev(unique(uniq_switch17$final_names))), 
-                                  size=n)) +
-  theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x="Sampling times", y= NULL, fill='z-score', size='Occupancy') +
-  theme(axis.text.y = element_text(size=10),
-        axis.text.x = element_text(angle = 45, hjust=1, size=12))
+#misc 2016
+misc16full <- otu_rare[,map_16S$plant == 'miscanthus' & map_16S$year == 2016 & map_16S$source == 'phyllosphere']
+misc16full <- misc16full[rowSums(misc16full)>0,]
+misc16core <- misc16full[rownames(misc16full) %in% selected_otus_misc$otu,]
+#unique(map_16S$sampling_week[map_16S$plant == 'miscanthus' & map_16S$year == 2016 & map_16S$source == 'phyllosphere'])
 
-#function for extracting the legend in the ggplot figure now in package 'lemon'
-g_legend<-function(a.gplot){
-  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)}
+for(i in misc16full){
+  week = c(3:9) 
+  misc16_BC_full <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=misc16full[,colnames(misc16full) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    misc16_BC_full <- rbind(misc16_BC_full,df)
+  }
+}
 
-mylegend <- g_legend(plot1)
+for(i in misc16core){
+  week = c(3:9) 
+  misc16_BC_core <- NULL
+  for(i in week){
+    samples = map_16S$sequence_name[map_16S$sampling_week== i]    #selecting the unique dates for pairwise calcualtions
+    time_sub=misc16core[,colnames(misc16core) %in% samples]   #subsetting matrix to the selected dates
+    x <- apply(combn(ncol(time_sub), 2), 2, function(x) sum(abs(time_sub[,x[1]]- time_sub[,x[2]]))/2000) 
+    x_names <- apply(combn(ncol(time_sub), 2), 2, function(x) paste(colnames(time_sub)[x], collapse=' - '))
+    df <- data.frame(x, x_names, i)
+    misc16_BC_core <- rbind(misc16_BC_core,df)
+  }
+}
 
-plot1 <- plot1 + theme(legend.position="none")
-plot3 <- plot3 + theme(legend.position="none")
-plot2 <- plot2 + theme(legend.position="none")
-plot4 <- plot4 + theme(legend.position="none")
-plot5 <- plot5 + theme(legend.position="none")
-plot6 <- plot6 + theme(legend.position="none")
+diffBC_misc16 <- left_join(misc16_BC_full,misc16_BC_core, by=c('x_names', 'i'))
+diffBC_misc16$diff_BC <- diffBC_misc16$x.y/diffBC_misc16$x.x
+mean(diffBC_misc16$diff_BC)
+misc16_BC_plot <- ggplot(diffBC_misc16, aes(x=factor(i), y=diff_BC)) +
+  geom_violin(trim=FALSE, cex=1, color='darkgreen', fill='darkgreen', 
+              alpha=.2) +
+  geom_jitter(width=0.1, color='darkgreen') +
+  ylim(0,1) +
+  expand_limits(x =factor(seq(1,9, by=1))) +
+  theme_bw() +
+  labs(x=NULL, y='Fraction of beta diversity\nwithin the time points') +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), axis.line = element_line(colour = "black"), 
+        axis.text.x = element_blank(), panel.border = element_blank())
 
-library(egg)
+#----------------------------------------------------------
+#Dynamics of the clusters assigned by the hclust function
+
+abund_plot_sw16 <- data.frame(otu = as.factor(row.names(relabund_filtered)), relabund_filtered) %>% 
+  gather(sequence_name, abun, -otu) %>%  
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year', 'sampling_week','rep')], by = 'sequence_name') %>%
+  filter(year == 2016, plant == 'switchgrass', source != 'soil') %>%
+  filter(otu %in% sw_core_OTUs) %>%
+  left_join(sw16_clusters, by='otu') %>%
+  group_by(sampling_date) %>%
+  mutate(sample_size = length(unique(sequence_name))) %>%
+  group_by(sampling_week, sampling_date, memb_sw16, stage) %>%
+  summarize(n_relabun=sum(abun)/unique(sample_size)) %>%
+  filter(!is.na(memb_sw16)) %>%
+  ggplot(aes(x=factor(sampling_date), y=n_relabun, color=stage, group=stage))+
+  geom_line(size=2)+
+  scale_color_manual(values = c('red','blue','grey'))+
+  theme_classic() + theme(strip.background = element_blank(),
+                          axis.text.x = element_text(angle=45, hjust = 1),
+                          legend.position = 'none') +
+  labs(x='Sampling date', y=NULL) +
+  ylim(0,.9)
+
+
+abund_plot_sw17 <- data.frame(otu = as.factor(row.names(relabund_filtered)), relabund_filtered) %>% 
+  gather(sequence_name, abun, -otu) %>%  
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year', 'sampling_week','rep')], by = 'sequence_name') %>%
+  left_join(sw17_clusters, by=c('otu')) %>%
+  filter(otu %in% sw17_core_OTUs , year == 2017, plant == 'switchgrass', source != 'soil') %>%
+  group_by(sampling_date)%>%
+  mutate(sample_size = length(unique(sequence_name))) %>%
+  group_by(sampling_week, sampling_date, memb_sw17, stage) %>%
+  summarize(n_relabun=sum(abun)/unique(sample_size)) %>%
+  filter(!is.na(memb_sw17)) %>%
+  ggplot(aes(x=factor(sampling_date), y=n_relabun, color=stage, group=factor(memb_sw17)))+
+  geom_line(size=2)+
+  scale_color_manual(values = c('red','blue','grey'))+
+  theme_classic() + theme(strip.background = element_blank(),
+                          axis.text.x = element_text(angle=45, hjust = 1),
+                          legend.position = 'none') +
+  labs(x=NULL, y=NULL)+
+  ylim(0,.9)
+
+abund_plot_mi16 <- data.frame(otu = as.factor(row.names(relabund_filtered)), relabund_filtered) %>% 
+  gather(sequence_name, abun, -otu) %>%  
+  left_join(map_16S[, c('sequence_name','source', 'plant', 'sampling_date', 'year', 'sampling_week','rep')], by = 'sequence_name') %>%
+  filter(otu %in% unique(selected_otus_misc$otu) & year == 2016 & plant == 'miscanthus' & source != 'soil') %>%
+  left_join(misc_clusters, by='otu') %>%
+  group_by(sampling_date)%>%
+  mutate(sample_size = length(unique(sequence_name))) %>%
+  group_by(sampling_week, sampling_date, memb_misc, stage) %>%
+  summarize(n_relabun=sum(abun)/unique(sample_size)) %>%
+  ggplot(aes(x=factor(sampling_date), y=n_relabun, color=factor(stage), group=memb_misc))+
+  geom_line(size=2)+
+  scale_color_manual(values = c('red','blue','grey'))+
+  theme_classic() + theme(strip.background = element_blank(),
+                          axis.text.x = element_text(angle=45, hjust = 1),
+                          legend.position = 'none') +
+  labs(x=NULL, y='Relative\nabundance')+
+  ylim(0,.9)
+
 setEPS()
-postscript('Figures/Figure3B-2_v2.eps', width = 16, height = 9)
-grid.draw(ggarrange(plot3,
-                    plot1,
-                    plot5,
-                    plot4,
-                    plot2,
-                    plot6, heights = c(1.5,.8)))
-dev.off()
-####Replotting the Fig 3
-combined_otus_switch17$tag <- 'switch17'
-combined_otus_switch$tag <- 'switch16'
-combined_otus_misc$tag <- 'misc16'
-uniq_misc$tag <- 'misc16'
-uniq_switch$tag <- 'switch16'
-uniq_switch17$tag <- 'switch17'
-
-combined_all <- rbind(combined_otus_switch17,combined_otus_switch)
-combined_all <- rbind(combined_all,combined_otus_misc)
-combined_all <- rbind(combined_all,uniq_misc)
-combined_all <- rbind(combined_all,uniq_switch)
-combined_all <- rbind(combined_all,uniq_switch17)
-
-combined_all$sampling_week <- 0
-combined_all$sampling_week[combined_all$sampling_date == '2017-05-15 EDT'] <- 1 
-combined_all$sampling_week[combined_all$sampling_date == '2016-05-09 EDT'] <- 1
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-05-31 EDT'] <- 2
-combined_all$sampling_week[combined_all$sampling_date == '2017-06-05 EDT'] <- 2 
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-06-20 EDT'] <- 3
-combined_all$sampling_week[combined_all$sampling_date == '2017-06-26 EDT'] <- 3
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-07-12 EDT'] <- 4 
-combined_all$sampling_week[combined_all$sampling_date == '2017-07-17 EDT'] <- 4
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-08-01 EDT'] <- 5 
-combined_all$sampling_week[combined_all$sampling_date == '2017-08-07 EDT'] <- 5 
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-08-22 EDT'] <- 6 
-combined_all$sampling_week[combined_all$sampling_date == '2017-08-28 EDT'] <- 6 
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-09-12 EDT'] <- 7 
-combined_all$sampling_week[combined_all$sampling_date == '2017-09-18 EDT'] <- 7 
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-10-03 EDT'] <- 8
-
-combined_all$sampling_week[combined_all$sampling_date == '2016-11-07 EST'] <- 9
-
-class(combined_all$tag) 
-
-#Figure 3
-ggplot(combined_all,aes(x=factor(sampling_week), y=as.factor(tag), 
-                        size=n)) +
-  theme_bw()+
-  geom_point(pch=21, colour='black', aes(fill=z_score)) +
-  scale_fill_gradient2(low = "#b2182b", high ="#2166ac") +
-  labs(x='Sampling week', y= NULL, title='Core') +
-  theme(
-        axis.text.y = element_text(size=10),
-        strip.text = element_text(size=7)) + 
-  facet_wrap(~final_names, labeller = label_wrap_gen(), ncol=4) +
-  scale_y_discrete(limits=rev(levels(factor(combined_all$tag))))
-
-###############################################################
-#Suppl Fig - Dynamics of the OTUs classified as Alpha and Gamma proteobacteria
-###############################################################
-rel_otu_rare <- decostand(otu_rare, method="total", MARGIN=2)
-
-proteo_plot <- data.frame(otu = as.factor(row.names(otu_rare)), otu_rare) %>% gather(sequence_name, abun, -otu) %>% 
-  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'year'
-  )], by = 'sequence_name') %>%
-  left_join(tax_short, by='otu') %>% 
-  filter(grepl('Alphaproteobacteria|Betaproteobacteria|Deltaproteobacteria|Gammaproteobacteria', Class)) %>%
-  filter(source == 'phyllosphere') %>%
-  mutate(plant = factor(plant, levels = c('switchgrass', 'miscanthus'))) %>%
-  group_by(plant, Class, sampling_date) %>%
-  summarise(n=sum(abun),
-            n_reps=length(unique(sequence_name))) %>%
-  group_by(plant, sampling_date) %>%
-  mutate(total_reads=sum(n),
-         rel_abun=n/total_reads) %>%
-  ggplot(aes(x=as.factor(sampling_date), y=rel_abun, fill=Class)) +
-  geom_bar(color='black', stat = 'identity') +
-  theme_classic() +
-  facet_grid(~plant, scales='free_x') +
-  labs(x='Sampling time', y='Normalized relative abundance')+
-  theme(axis.text.x = element_text(angle = 45, hjust=1, size=8),
-        legend.position = 'bottom') +
-  guides(fill = guide_legend(ncol = 3, title=NULL))
-
-#data organisation for plotting the Pseudomonas, Sphingomonas and Methylobacteria dynamics
-selected_otus
-selected_otus$sampling_week <- 0
-selected_otus$sampling_week[map_16S$sampling_date == '2017-05-15 EDT'] <- 1 
-selected_otus$sampling_week[map_16S$sampling_date == '2016-05-09 EDT'] <- 1
-map_16S$sampling_week[map_16S$sampling_date == '2016-05-31 EDT'] <- 2
-map_16S$sampling_week[map_16S$sampling_date == '2017-06-05 EDT'] <- 2 
-map_16S$sampling_week[map_16S$sampling_date == '2016-06-20 EDT'] <- 3
-map_16S$sampling_week[map_16S$sampling_date == '2017-06-26 EDT'] <- 3
-map_16S$sampling_week[map_16S$sampling_date == '2016-07-12 EDT'] <- 4 
-map_16S$sampling_week[map_16S$sampling_date == '2017-07-17 EDT'] <- 4
-map_16S$sampling_week[map_16S$sampling_date == '2016-08-01 EDT'] <- 5 
-map_16S$sampling_week[map_16S$sampling_date == '2017-08-07 EDT'] <- 5 
-map_16S$sampling_week[map_16S$sampling_date == '2016-08-22 EDT'] <- 6 
-map_16S$sampling_week[map_16S$sampling_date == '2017-08-28 EDT'] <- 6 
-map_16S$sampling_week[map_16S$sampling_date == '2016-09-12 EDT'] <- 7 
-map_16S$sampling_week[map_16S$sampling_date == '2017-09-18 EDT'] <- 7 
-map_16S$sampling_week[map_16S$sampling_date == '2016-10-03 EDT'] <- 8
-map_16S$sampling_week[map_16S$sampling_date == '2016-11-07 EST'] <- 9
-
-methylobac<- combined_all[combined_all$Genus =='g:Methylobacterium',]
-pseudomonas<- combined_all[combined_all$Genus =='g:Pseudomonas',]
-sphingomonas <- combined_all[combined_all$Genus =='g:Sphingomonas',]
-
-filtered_methylo <- sphingomonas %>% 
-  #mutate(plant = factor(plant, levels = c('switchgrass', 'miscanthus')))  %>%
-  filter(!is.na(c(sampling_week))) 
-
-# sphing_aov <- aov(abun ~ factor(sampling_date)+plant,  data = filtered_methylo[filtered_methylo$otu=='2',])
-# summary(sphing_aov)
-# TukeyHSD(sphing_aov)
-library(broom)
-
-sphingo_result = filtered_methylo %>%
-  filter(!(sampling_week %in% c(8,9))) %>%
-  group_by(sampling_week, final_names) %>%
-  do(tidy(t.test(.$abun~.$tag))) %>%
-  mutate(FDR=p.adjust(p.value, method='fdr')) %>%
-  filter(p.value < .05)
-
-methylo_result$sampling_date <- as.factor(methylo_result$sampling_date)
-methylo_result
-sphingo_result
-pseudo_result
-
-sphingo <- ggplot(filtered_methylo, aes(x = as.factor(sampling_date), y = abun, fill=plant)) + 
-  geom_boxplot() +
-  theme_bw()+
-  #scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance") +
-  facet_grid(plant ~ final_names, scale = 'free_y') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5),
-        legend.position='bottom', 
-        legend.background = element_rect(fill="transparent"),
-        strip.text.x = element_blank()) +
-  guides(fill = guide_legend(ncol=3, title=NULL))
-
-install.packages("ggpubr")
-library(ggpubr)
-
-setEPS()
-postscript('Figures/sphingo_dynamics.eps', width = 6, height = 5)
-sphingo
+postscript("~/Desktop/Fig4.eps", width=10, height=10, pointsize=10, paper="special")
+grid.draw(ggarrange(FigC,FigA,FigB,
+                    misc16_BC_plot,switch16_BC_plot,switch17_BC_plot, 
+                    #over_time_abundance_sw16,over_time_abundance_sw17,over_time_abundance_misc,
+                    abund_plot_mi16,abund_plot_sw16,abund_plot_sw17,
+                    nrow = 3))
 dev.off()
 
-big.phyllo.taxa <- data.frame(otu = as.factor(row.names(otu_rare)), otu_rare) %>% gather(sequence_name, abun, -otu) %>% 
-  left_join(map_16S[, c('sequence_name','treatment' ,'source', 'plant', 'sampling_date', 'month'
-  )], by = 'sequence_name') %>%
-  left_join(tax_short, by='otu') %>% 
-  filter(source=='phyllosphere') %>% 
-  group_by(plant,Kingdom,Phylum,Class,Family,Genus,otu, month) %>%
-  summarise(n=sum(abun)) %>%
-  arrange(desc(n)) 
-  
+#-------------------------------------------------------
+#Heatmap - Figure S4
+#' Preparing the data for plotting 
 plant_otu <- otu_rare[,map_16S$source=="phyllosphere"]
 plant_otu <- plant_otu[rowSums(plant_otu)>0,]
 soil_otu <- otu_rare[,map_16S$source=="soil"] 
 soil_otu <- soil_otu[rowSums(soil_otu)>0,]
 
-total_sum_soil_otu <- as.data.frame(rowSums(soil_otu))
-sum_soil_otu <- sum(total_sum_soil_otu$`rowSums(soil_otu)`)
-total_sum_soil_otu$rel_abun <- total_sum_soil_otu$`rowSums(soil_otu)`/sum_soil_otu
-#total_sum_soil_otu <- arrange(total_sum_soil_otu,desc(rel_abun))
-sum(total_sum_soil_otu$rel_abun)
-phylloINsoil=total_sum_soil_otu[rownames(total_sum_soil_otu) %in% rownames(plant_otu),]
-sum(phylloINsoil$rel_abun) #OTUs find in phyllospere make up to 55.6% of soil community size 
+soil_relabun <- decostand(soil_otu,method="total", MARGIN=2)
+plant_relabun <- decostand(plant_otu,method="total", MARGIN=2)
 
-#Dynamics of the unique taxa
-####################################
-switch_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% swit_occ_abun$otu[swit_occ_abun$unique=='unique'],]
-(switch_unique <- data.frame(otu = as.factor(row.names(switch_unique_otus)), switch_unique_otus) %>% gather(sequence_name, abun, -otu) %>% 
-    left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'month'
-    )], by = 'sequence_name') %>%
-    left_join(tax_short, by='otu') %>% 
-    filter(source == 'phyllosphere' & plant == 'switchgrass' & month >= 8) %>%
-    group_by(Genus) %>%
-    filter(abun>0) %>%
-    ggplot(aes(x=as.factor(sampling_date), y=abun)) +
-    geom_boxplot() +
-    theme_classic() +
-    #facet_wrap( ~ as.factor(Class), scale = 'free_y') +
-    labs(x='Sampling time', y='Mean abundance')+
-    theme(axis.text.x = element_text(angle = 45, hjust=1, size=6),
-          legend.position = 'bottom'))
+soilOTU_df <- data.frame(otu=rownames(soil_relabun), soil_relabun) %>% 
+  gather(sequence_name, relabun, -otu) %>%
+  mutate(source='soil')
+soilOTUsub_df <- soilOTU_df[soilOTU_df$otu %in% rownames(plant_relabun),]
 
-setEPS()
-postscript('Figures/switchgrass_unique_dynamics.eps', height = 9, width = 12)
-switch_unique
-dev.off()
+leafOTU_df <- data.frame(otu=rownames(plant_relabun), plant_relabun) %>% 
+  gather(sequence_name, relabun, -otu) %>%
+  mutate(source='phyllosphere')
 
-misc_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% misc_occ_abun$otu[misc_occ_abun$unique=='unique'],]
-(misc_unique <- data.frame(otu = as.factor(row.names(misc_unique_otus)), misc_unique_otus) %>% gather(sequence_name, abun, -otu) %>% 
-    left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date'
-    )], by = 'sequence_name') %>%
-    left_join(tax_short, by='otu') %>% 
-    filter(source == 'phyllosphere' & plant == 'miscanthus') %>%
-    group_by(sampling_date) %>%
-    mutate(n=mean(abun)) %>%
-    ggplot(aes(x=as.factor(sampling_date), y=abun)) +
-    geom_boxplot() +
-    theme_classic() +
-    facet_wrap( ~ as.factor(Class), scale = 'free_y') +
-    labs(x='Sampling time', y='Mean abundance')+
-    theme(axis.text.x = element_text(angle = 45, hjust=1, size=6),
-          legend.position = 'bottom'))
+OTU_relabun_notime <- rbind(soilOTUsub_df, leafOTU_df) %>%
+  left_join(map_16S[,c('sequence_name', 'sampling_date', 'year', 'plant')], by='sequence_name') %>%
+  group_by(source, otu, year, plant) %>%
+  summarise(rel_abun=sum(relabun)/length(unique(sequence_name)))
 
-setEPS()
-postscript('~/Dropbox/GLBRC_16S/Supplemental/miscanthus_unique_dynamics.eps', height = 9, width = 12)
-misc_unique
-dev.off()
+OTU_relabun <- rbind(soilOTUsub_df, leafOTU_df) %>%
+  left_join(map_16S[,c('sequence_name', 'sampling_date', 'year', 'plant')], by='sequence_name') %>%
+  group_by(source, otu, sampling_date,year, plant) %>%
+  summarise(rel_abun=sum(relabun)/length(unique(sequence_name)))
 
-####################################
-#eLSA
+OTU_relabun_notime$memb <- 'other'
+OTU_relabun_notime$memb[OTU_relabun_notime$otu %in% unique(core_list)] <- 'core'
+
+#' Calculating soil OTU ranks
+misc_soil_otu <- otu_rare[,map_16S$plant=="miscanthus" & (map_16S$source=='soil')]
+swit16_soil_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='soil') & (map_16S$year==2016)]
+swit17_soil_otu <- otu_rare[,map_16S$plant=="switchgrass" & (map_16S$source=='soil') & (map_16S$year==2017)]
+misc_soil_rank=sort(rowSums(misc_soil_otu)/sum(rowSums(misc_soil_otu)), decreasing=TRUE)
+s16_soil_rank=sort(rowSums(swit16_soil_otu)/sum(rowSums(swit16_soil_otu)), decreasing=TRUE)
+s17_soil_rank=sort(rowSums(swit17_soil_otu)/sum(rowSums(swit17_soil_otu)), decreasing=TRUE)
+
+misc_leafinSoil <- misc_soil_rank[names(misc_soil_rank) %in% rownames(mis)]
+s16_leafinSoil <- s16_soil_rank[names(s16_soil_rank) %in% rownames(sw)]
+s17_leafinSoil <- s17_soil_rank[names(s17_soil_rank) %in% rownames(sw17)]
+
+#Miscanthus
+misc_soil_phyllo_df <- data.frame(rel_abun=misc_soil_rank, otu = names(misc_soil_rank))
+misc_soil_phyllo_df$source <- 'soil'
+misc_soil_phyllo_df$source[misc_soil_phyllo_df$otu %in% rownames(mis)] <- 'phyllo'
+misc_soil_phyllo_df <- left_join(misc_soil_phyllo_df, OTU_relabun_notime[OTU_relabun_notime$source=='phyllosphere',], by='otu')
+misc_soil_phyllo_df[is.na(misc_soil_phyllo_df)] <- 0
+misc_soil_phyllo_df$otu <- factor(misc_soil_phyllo_df$otu, levels=misc_soil_phyllo_df$otu)
+
+#' Using only the top 50 soil taxa
+misc_soil_phyllo_df <- misc_soil_phyllo_df[misc_soil_phyllo_df$otu %in% rownames(mis),]
+top50_miscTaxa <- as.character(unique(misc_soil_phyllo_df$otu)[1:50])
+
+#' Creating abundance matrix for the heatmap
+OTU_relabun_leaf_misc<- OTU_relabun[OTU_relabun$source == 'phyllosphere' & OTU_relabun$plant == 'miscanthus',]
+rel_abun_matrix_misc<- acast(OTU_relabun_leaf_misc[OTU_relabun_leaf_misc$otu %in% top50_miscTaxa,], otu~sampling_date, value.var="rel_abun")
+remaining_OTUs <- top50_miscTaxa[top50_miscTaxa %in% rownames(rel_abun_matrix_misc)]
+rel_abun_matrix_misc <- rel_abun_matrix_misc[match(remaining_OTUs,rownames(rel_abun_matrix_misc)), ]
+remaining_OTUs==rownames(rel_abun_matrix_misc)
+scaleyellowred <- colorRampPalette(c("white", "black"), space = "rgb")(10)
+sampleColor <- rep('grey', length(rownames(rel_abun_matrix_misc)))
+sampleColor[rownames(rel_abun_matrix_misc) %in% misc_core_OTUs] <- 'red'
+heatmap(rel_abun_matrix_misc,Colv = NA, Rowv = NA,scale="row",  
+        ylab='50 top ranked soil OTUs', col = scaleyellowred,
+        RowSideColors = sampleColor)
+
+#Switchgrass 2016
+s16_soil_phyllo_df <- data.frame(rel_abun=s16_soil_rank, otu = names(s16_soil_rank))
+s16_soil_phyllo_df$source <- 'soil'
+s16_soil_phyllo_df$source[s16_soil_phyllo_df$otu %in% rownames(sw)] <- 'phyllo'
+s16_soil_phyllo_df <- left_join(s16_soil_phyllo_df, OTU_relabun_notime[OTU_relabun_notime$source=='phyllosphere',], by='otu')
+s16_soil_phyllo_df[is.na(s16_soil_phyllo_df)] <- 0
+
+#' Using only the top 50 soil taxa
+s16_soil_phyllo_df <- s16_soil_phyllo_df[s16_soil_phyllo_df$otu %in% rownames(sw),]
+top50_swTaxa <- as.character(unique(s16_soil_phyllo_df$otu)[1:50])
+
+#' Creating abundance matrix for the heatmap
+OTU_relabun_leaf_s16<- OTU_relabun[OTU_relabun$source == 'phyllosphere' & OTU_relabun$plant == 'switchgrass' & OTU_relabun$year == '2016',]
+rel_abun_matrix_sw<- acast(OTU_relabun_leaf_s16[OTU_relabun_leaf_s16$otu %in% top50_swTaxa,], otu~sampling_date, value.var="rel_abun")
+remaining_OTUs <- top50_swTaxa[top50_swTaxa %in% rownames(rel_abun_matrix_sw)]
+rel_abun_matrix_sw <- rel_abun_matrix_sw[match(remaining_OTUs,rownames(rel_abun_matrix_sw)), ]
+remaining_OTUs==rownames(rel_abun_matrix_sw)
+scaleyellowred <- colorRampPalette(c("white", "black"), space = "rgb")(10)
+sampleColor <- rep('grey', length(rownames(rel_abun_matrix_sw)))
+sampleColor[rownames(rel_abun_matrix_sw) %in% sw_core_OTUs] <- 'red'
+heatmap(rel_abun_matrix_sw,Colv = NA, Rowv = NA,scale="row",  
+        ylab='50 top ranked soil OTUs', col = scaleyellowred,
+        RowSideColors = sampleColor)
+
+#Switchgrass 2017
+s17_soil_phyllo_df <- data.frame(rel_abun=s17_soil_rank, otu = names(s17_soil_rank))
+s17_soil_phyllo_df$source <- 'soil'
+s17_soil_phyllo_df$source[s17_soil_phyllo_df$otu %in% rownames(sw17)] <- 'phyllo'
+s17_soil_phyllo_df <- left_join(s17_soil_phyllo_df, OTU_relabun_notime[OTU_relabun_notime$source=='phyllosphere' & OTU_relabun_notime$year == 2017,], by='otu') %>% arrange(desc(rel_abun.x))
+s17_soil_phyllo_df[is.na(s17_soil_phyllo_df)] <- 0
+
+#' Using only the top 50 soil taxa found also in the phyllopshre
+s17_soil_phyllo_df <- s17_soil_phyllo_df[s17_soil_phyllo_df$otu %in% rownames(sw17),]
+top50_sw17_Taxa <- as.character(unique(s17_soil_phyllo_df$otu)[1:50])
+
+#' Creating abundance matrix for the heatmap
+OTU_relabun_leaf_s17<- OTU_relabun[OTU_relabun$source == 'phyllosphere' & OTU_relabun$plant == 'switchgrass' & OTU_relabun$year == '2017',]
+rel_abun_matrix_sw17<- acast(OTU_relabun_leaf_s17[OTU_relabun_leaf_s17$otu %in% top50_sw17_Taxa,], otu~sampling_date, value.var="rel_abun")
+remaining_OTUs <- top50_sw17_Taxa[top50_sw17_Taxa %in% rownames(rel_abun_matrix_sw17)]
+rel_abun_matrix_sw17 <- rel_abun_matrix_sw17[match(remaining_OTUs,rownames(rel_abun_matrix_sw17)), ]
+remaining_OTUs==rownames(rel_abun_matrix_sw17)
+scaleyellowred <- colorRampPalette(c("white", "black"), space = "rgb")(10)
+sampleColor <- rep('grey', length(rownames(rel_abun_matrix_sw17)))
+sampleColor[rownames(rel_abun_matrix_sw17) %in% sw17_core_OTUs] <- 'red'
+heatmap(rel_abun_matrix_sw17,Colv = NA, Rowv = NA,scale="row",  
+        ylab='50 top ranked soil OTUs', col = scaleyellowred,
+        RowSideColors = sampleColor)
+
+
+
+
 ###############################################################
-#Data prep for the eLSA analysis
-length(unique(selected_otus$otu))
-
-swit_selected_otu_list <- unique(selected_otus_switch$otu)
-misc_selected_otu_list <- unique(selected_otus_misc$otu)
-swit17_selected_otu_list <- unique(selected_otus_switch17$otu)
-
-slected_switch_otu_abundance<- otu_rare[rownames(otu_rare) %in% swit_selected_otu_list,]
-slected_misc_otu_abundance<- otu_rare[rownames(otu_rare) %in% misc_selected_otu_list,]
-slected_switch17_otu_abundance<- otu_rare[rownames(otu_rare) %in% swit17_selected_otu_list,]
-
-switch_selected_otus <- selected_otus_switch%>%
-  filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2016)
-misc_selected_otus <- selected_otus_misc%>%
-  filter(source == 'phyllosphere' & plant == 'miscanthus' & year == 2016)
-switch17_selected_otus <- selected_otus_switch17 %>%
-  filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017)
-
-#misc_selected_otus %>% 
-#  group_by(sampling_date) %>%
-#  summarise(n=length(unique(sequence_name)))
-#length(unique(misc_selected_otus$sampling_date))
-
-switch_timed_samples <- switch_selected_otus[order(switch_selected_otus$sampling_date),]
-switch_timed_samples <- unique(switch_timed_samples$sequence_name)
-
-misc_timed_samples <- misc_selected_otus[order(misc_selected_otus$sampling_date),]
-misc_timed_samples <- unique(misc_timed_samples$sequence_name)
-
-switch17_timed_samples <- switch17_selected_otus[order(switch17_selected_otus$sampling_date),]
-switch17_timed_samples <- unique(switch17_timed_samples$sequence_name)
-
-#organise abundance df so that the samples are time organised
-LSA_switch_data <- slected_switch_otu_abundance[,colnames(slected_switch_otu_abundance) %in% switch_timed_samples]
-LSA_switch_data <- LSA_switch_data[,switch_timed_samples]
-
-LSA_misc_data <- slected_misc_otu_abundance[,colnames(slected_misc_otu_abundance) %in% misc_timed_samples]
-LSA_misc_data <- LSA_misc_data[ ,misc_timed_samples]
-
-LSA_switch17_data <- slected_switch17_otu_abundance[,colnames(slected_switch17_otu_abundance) %in% switch17_timed_samples]
-LSA_switch17_data <- LSA_switch17_data[,switch17_timed_samples]
-# nrow(LSA_misc_data)
-# nrow(LSA_switch_data)
-# nrow(LSA_switch17_data)
-
-#write tables for the eLSA analysis
-write.table(LSA_switch_data, 'InputFiles/LSAswitch16_input.txt', sep='\t')
-write.table(LSA_misc_data, 'InputFiles/LSAmisc16_input.txt', sep='\t')
-write.table(LSA_switch17_data, 'InputFiles/LSAswitch17_input.txt', sep='\t')
-#######
-#Import eLSA output tables for plotting 
-s16.ELSA <- read.table('InputFiles/LSAswitch16_output.txt', header=T, sep='\t')
-m.ELSA <- read.table('InputFiles/LSAmisc16_output.txt', header=T, sep='\t')
-s17.ELSA <- read.table('InputFiles/LSAswitch17_output.txt', header=T, sep='\t')
-# 
-# swit16_plot_connection <- s16.ELSA %>% 
-#   filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
-#   group_by(X) %>%
-#   summarise(edgesNo=length(Y))%>%
-#   arrange(desc(edgesNo)) %>%
-#   ggplot(aes(x=(reorder(X, -edgesNo)), y=edgesNo)) +
-#   geom_point() +
-#   theme_bw()+
-#   labs(x=NULL, y= 'Number of connections', title='Switchgrass 2016') + 
-#   theme(plot.title = element_text(hjust = 0.5, size = 12),
-#         axis.text.x = element_text(angle = 45, hjust=1, size=8.5))
-# 
-# swit17_plot_connection <- s17.ELSA %>% 
-#   filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
-#   group_by(X) %>%
-#   summarise(edgesNo=length(Y))%>%
-#   arrange(desc(edgesNo)) %>%
-#   ggplot(aes(x=(reorder(X, -edgesNo)), y=edgesNo)) +
-#   geom_point() +
-#   theme_bw()+
-#   labs(x=NULL, y= 'Number of connections', title='Switchgrass 2017') + 
-#   theme(plot.title = element_text(hjust = 0.5, size = 12),
-#         axis.text.x = element_text(angle = 45, hjust=1, size=8.5))
-# 
-# misc_plot_connection <- m.ELSA %>% 
-#   filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
-#   group_by(X) %>%
-#   summarise(edgesNo=length(Y))%>%
-#   arrange(desc(edgesNo)) %>%
-#   ggplot(aes(x=(reorder(X, -edgesNo)), y=edgesNo)) +
-#   geom_point() +
-#   theme_bw()+
-#   labs(x=NULL, y= 'Number of connections', title='Miscanthus 2016') + 
-#   theme(plot.title = element_text(hjust = 0.5, size = 12),
-#         axis.text.x = element_text(angle = 45, hjust=1, size=8.5))
-
-s16.ELSA$plant <- 'Switchgrass 2016'
-s17.ELSA$plant <- 'Switchgrass 2017'
-m.ELSA$plant <- 'Miscanthus 2016'
-eLSA_combined <- rbind(s16.ELSA, s17.ELSA, m.ELSA)
-
-all_eLSA_plot_X_Y <- eLSA_combined %>% 
-  filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
-  group_by(plant, X) %>%
-  summarise(edgesNo=length(Y))%>%
-  arrange(desc(edgesNo)) %>%
-  ggplot(aes(x=(reorder(X, -edgesNo)), y=edgesNo)) +
-  geom_point() +
-  theme_bw()+
-  facet_wrap(~plant, scales = "free_x") +
-  labs(x=NULL, y= '# of connections building') + 
-  theme(axis.text.x = element_text(angle = 90, hjust=1, size=8.5))
-
-all_eLSA_plot_Y_X <- eLSA_combined %>% 
-  filter(P<0.05 & !(LS>-0.35 & LS<.35)) %>%
-  group_by(plant, Y) %>%
-  summarise(edgesNo=length(X))%>%
-  arrange(desc(edgesNo)) %>%
-  ggplot(aes(x=(reorder(Y, -edgesNo)), y=edgesNo)) +
-  geom_point() +
-  theme_bw()+
-  facet_wrap(~plant, scales = "free_x") +
-  labs(x=NULL, y= '# of connections receiving') + 
-  theme(axis.text.x = element_text(angle = 90, hjust=1, size=8.5))
-
-names(all_eLSA_plot_X_Y)[2] <- 'otu'
-names(all_eLSA_plot_Y_X)[2] <- 'otu'
-
-connection_df <- rbind(all_eLSA_plot_X_Y, all_eLSA_plot_Y_X)
-tax_otus_short <- unique(tax_short[,c('otu','Class')])
-connection_df <- left_join(connection_df,tax_otus_short)
-
-conn_plot <- connection_df %>%
-  group_by(plant, otu, Class) %>%
-  summarise(n=sum(edgesNo)) %>%
-  arrange(desc(n)) %>%
-  ggplot(aes(x=(reorder(otu, -n)), y=n, fill=Class)) +
-  geom_point(pch=21, size=3) +
-  theme_bw()+
-  facet_wrap(~plant, scales = "free_x") +
-  labs(x=NULL, y= '# of connections') +
-  theme(axis.text.x = element_text(angle = 90, hjust=1, size=12, vjust=.5),
-        legend.position = 'bottom')
-
-switch16_core <- tmp3[,c(1,11,14)]
-switch16_core <- as.data.frame(switch16_core)
-#switch16_core_wide <- reshape(switch16_core, idvar='otu', timevar='sampling_date', direction='wide')
-switch16_core_wide_df <- spread(switch16_core, key='sampling_date', value='z_score')
-switch16_core_wide[is.na(switch16_core_wide)] <- 0
-rownames(switch16_core_wide) <- switch16_core_wide$otu
-switch16_core_wide$otu <-  NULL
-
-set.seed(20)
-clusters_switch16 <- hclust(dist(switch16_core_wide),'complete')
-memb <- cutree(clusters_switch16, k=3)
-plot(clusters_switch16)
-
-switch17_core <- tmp9[,c(1,2,13)]
-#switch17_core <- as.data.frame(switch17_core)
-#switch16_core_wide <- reshape(switch16_core, idvar='otu', timevar='sampling_date', direction='wide')
-switch17_core_wide <- spread(switch17_core, key='sampling_date', value='z_score')
-switch17_core_wide[is.na(switch17_core_wide)] <- 0
-rownames(switch17_core_wide) <- switch17_core_wide$final_names
-switch17_core_wide$final_names <-  NULL
-set.seed(21)
-clusters_switch17 <- hclust(dist(switch17_core_wide),'average')
-memb <- cutree(clusters_switch17, k=3)
-plot(clusters_switch17)
-
-misc16_core <- temp6[,c(1,2,14)]
-#switch17_core <- as.data.frame(switch17_core)
-#switch16_core_wide <- reshape(switch16_core, idvar='otu', timevar='sampling_date', direction='wide')
-misc16_core_wide <- spread(misc16_core, key='sampling_date', value='z_score')
-misc16_core_wide[is.na(misc16_core_wide)] <- 0
-rownames(misc16_core_wide) <- misc16_core_wide$final_names
-misc16_core_wide$final_names <-  NULL
-set.seed(21)
-clusters_misc16 <- hclust(dist(misc16_core_wide),'complete')
-memb <- cutree(clusters_misc16, k=3)
-plot(clusters_misc16)
-
-#Plotting the abundance dynamics of the selected OTUs for Switchgrass and Miscanthus together
-ggplot(selected_otus[selected_otus$source=='phyllosphere',], aes(x = as.factor(sampling_date), y = abun, fill = plant)) + 
-  geom_boxplot() +
-  scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance", title='Relative abundance dynamics of the selected phyllosphere OTUs (n=35)') +
-  facet_wrap( ~ as.factor(final_names), scale = 'free_y') +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5))
-
-swit_only<- selected_otus[selected_otus$source=='phyllosphere' & selected_otus$plant =='switchgrass',]
-
-swit_only %>% 
-  select(final_names, otu, Class) %>%
-  filter(otu==) %>%
-  arrange(Class)
-
-group2_LSA_swit <- c('357','101', '30')
-group1_LSA_swit <- c('10','21', '641','920', '1751')
-group3_LSA_swit <- c('8','20', '9','53')
-group4_LSA_swit <- c('12','6', '4','9', '19','108', '25', '2', '3')
-antigroup1_LSA_swit <- c('12', '1751', '4', '641')
-antigroup2_LSA_swit <- c('80', '63', '117', '37')
-
-unique(swit_only$Class[swit_only$otu==c('10','2','61','40','44','157')])
-swit_only_subset <- swit_only[(swit_only$otu %in% group4_LSA_swit),]
-
-swit_LSA_4 <- ggplot(swit_only_subset, 
-                     aes(x = as.factor(sampling_date), y = abun, fill=final_names)) + 
-  geom_boxplot() +
-  #scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance") +
-  #facet_wrap( ~ as.factor(final_names), scale = 'free_y') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5),
-        legend.position='bottom', 
-        legend.background = element_rect(fill="transparent")) +
-  guides(fill = guide_legend(ncol = 2, title=NULL))
-
-antigroup2 <- ggplot(swit_only_subset, 
-                     aes(x = as.factor(sampling_date), y = abun, fill=final_names)) + 
-  geom_boxplot() +
-  #scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance") +
-  #facet_wrap( ~ as.factor(final_names), scale = 'free_y') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5),
-        legend.position='bottom', 
-        legend.background = element_rect(fill="transparent")) +
-  guides(fill = guide_legend(ncol = 2, title=NULL))
-
-setEPS()
-postscript('Figures/eLSA_OTU_dynamics_group4.eps', width = 8, height = 6)
-swit_LSA_4
-dev.off()
-
-misc_only<- selected_otus[selected_otus$source=='phyllosphere' & selected_otus$plant =='miscanthus',]
-group1_LSA_misc <- c('10','30', '63','101', '641', '920')
-group2_LSA_misc <- c('8','27', '16','32', '149', '83', '53', '40', '22','4')
-group3_LSA_misc <- c('8','27', '16','32')
-antigroup1_misc <- c('8','27', '16','32', '30', '10')
-antigroup2_misc <- c('2','3', '10')
-alphaVSgamma <- c('8','27', '16','32','22', '4', '9', '10', '641', '920', '101', '63')
-
-misc_only_subset <- misc_only[(misc_only$otu %in% antigroup1_misc),]
-
-antigroup <- ggplot(misc_only_subset, 
-                    aes(x = as.factor(sampling_date), y = abun, fill=final_names)) + 
-  geom_boxplot() +
-  labs(x="Sampling times", y= "Relative abundance") +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5),
-        legend.position='bottom', 
-        legend.background = element_rect(fill="transparent")) +
-  guides(fill = guide_legend(ncol = 2, title=NULL))
-
-setEPS()
-postscript('Figures/eLSA_OTU_dynamics_antigroup1_misc.eps', width = 5, height = 5)
-antigroup_1_misc
-dev.off()
+#Suppl Fig - Dynamics of the OTUs classified as Alpha and Gamma proteobacteria
+###############################################################
+rel_otu_rare <- decostand(otu_rare, method="total", MARGIN=2)
 
 #Plotting the abundance dynamics of the selected OTUs for Switchgrass and Miscanthus together
 ggplot(selected_otus[selected_otus$source=='phyllosphere',], aes(x = as.factor(sampling_date), y = abun, fill = plant)) + 
@@ -1386,91 +1207,7 @@ ggplot(selected_otus[selected_otus$source=='phyllosphere',], aes(x = as.factor(s
   theme(axis.text.x = element_text(angle = 45, hjust=1),
         plot.title = element_text(hjust = 0.5))
 
-# phyllo_outs <- otu_rare[,colnames(otu_rare) %in% selected_otus$sequence_name[selected_otus$source=='phyllosphere']]
-# plant_otus <- data.frame(otu = as.factor(row.names(phyllo_outs)), phyllo_outs) %>% gather(sequence_name, abun, -otu) %>% 
-#   left_join(map_16S[, c('sequence_name', 'plant', 'sampling_date', 'month')], by = 'sequence_name')
-# head(plant_otus)
 
-#Time dependent OTUs
-#Who is there after the communities structures get less variable?
-switch_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% swit_occ_abun$otu[swit_occ_abun$unique=='Switchgrass 2016'],]
-switch_unique_late_stage <- data.frame(otu = as.factor(row.names(switch_unique_otus)), switch_unique_otus) %>% 
-  gather(sequence_name, abun, -otu) %>% 
-  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'month', 'year'
-  )], by = 'sequence_name') %>%
-  left_join(tax_short, by='otu') %>% 
-  filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2016) %>%
-  group_by(sampling_date,plant,Kingdom,Phylum, Class,Order, Genus) %>%
-  filter(abun>0) %>%
-  summarise(n_otu=length(unique(otu))) %>%
-  arrange(desc(n_otu))
-sum(switch_unique_late_stage$n_otu) 
-
-ggplot(switch_unique_late_stage, aes(x=as.factor(sampling_date), y=n_otu)) +
-  theme_bw()+
-  geom_bar(aes(fill=Phylum), stat='identity') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5))+
-  labs(x='Date', y='Number of OTUs')
-
-switch17_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% swit17_occ_abun$otu[swit17_occ_abun$unique=='Switchgrass 2017'],]
-switch17_unique_late_stage <- data.frame(otu = as.factor(row.names(switch17_unique_otus)), switch17_unique_otus) %>% 
-  gather(sequence_name, abun, -otu) %>% 
-  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'month', 'year'
-  )], by = 'sequence_name') %>%
-  left_join(tax_short, by='otu') %>% 
-  filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017) %>%
-  group_by(sampling_date,plant,Kingdom,Phylum, Class,Order, Genus) %>%
-  filter(abun>0) %>%
-  summarise(n_otu=length(unique(otu))) %>%
-  arrange(desc(n_otu))
-sum(switch_unique_late_stage$n_otu) 
-
-ggplot(switch17_unique_late_stage, aes(x=as.factor(sampling_date), y=n_otu)) +
-  geom_bar(aes(fill=Phylum), stat='identity') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5))+
-  labs(x='Date', y='Number of OTUs')
-
-misc_unique_otus <- rel_otu_rare[rownames(rel_otu_rare) %in% misc_occ_abun$otu[misc_occ_abun$unique=='Miscanthus 2016'],]
-dim(misc_unique_otus)
-misc_unique_late_stage <- data.frame(otu = as.factor(row.names(misc_unique_otus)), misc_unique_otus) %>% 
-  gather(sequence_name, abun, -otu) %>% 
-  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'month', 'year')], 
-            by = 'sequence_name') %>%
-  left_join(tax_short, by='otu') %>% 
-  filter(source == 'phyllosphere' & plant == 'miscanthus' & year == 2016) %>%
-  group_by(sampling_date,plant,Kingdom, Phylum, Class,Order, Genus) %>%
-  filter(abun>0) %>%
-  summarise(n_otu=length(unique(otu))) %>%
-  arrange(desc(n_otu))
-sum(misc_unique_late_stage$n_otu) 
-
-ggplot(misc_unique_late_stage, aes(x=as.factor(sampling_date), y=n_otu)) +
-  geom_bar(aes(fill=Phylum), stat='identity') +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5))+
-  labs(x='Date', y='Number of OTUs')
-
-combined_phyllo_uniqes <- rbind(misc_unique_late_stage,switch_unique_late_stage)
-combined_phyllo_uniqes <- rbind(combined_phyllo_uniqes,switch17_unique_late_stage)
-
-ggplot(combined_phyllo_uniqes, aes(x=as.factor(sampling_date), y=n_otu)) +
-  theme_bw()+
-  geom_bar(aes(fill=Phylum), stat='identity') +
-  facet_wrap(~plant) +
-  theme(axis.text.x = element_text(angle = 45, hjust=1),
-        plot.title = element_text(hjust = 0.5))+
-  labs(x='Date', y='Number of OTUs')
-ggsave('Figures/FigureS5.eps', height=4.5, width=7)
-
-#overview of the unique taxa - taxonomy
-unique_tax <- combined_phyllo_uniqes %>%
-  group_by(Phylum, Order, Genus) %>%
-  summarise(n=sum(n_otu)) %>%
-  arrange(desc(n))
-
-write.table(unique_tax, 'Figures/TableS1.txt', sep = '\t')
 
 
 ### End Nejc Analysis
