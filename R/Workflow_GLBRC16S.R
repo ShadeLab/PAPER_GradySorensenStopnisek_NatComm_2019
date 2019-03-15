@@ -697,6 +697,8 @@ z_df_misc %>% arrange(otu) %>%
   ) %>%
   arrange(Class, Family) -> temp6
 
+temp6[temp6$otu == 'OTU1674',]
+
 #*******************
 #Switchgrass 2017
 #OTU mean abundance per sampling time 
@@ -798,7 +800,7 @@ sw17_clusters$stage[sw17_clusters$memb_sw17==1] <- 'mid'
 misc_clusters <- data.frame(memb_misc)
 misc_clusters$otu <-rownames(misc_clusters)
 misc_clusters$stage[misc_clusters$memb_misc==2] <- 'late'
-misc_clusters$stage[misc_clusters$memb_misc==3] <- 'mid'
+misc_clusters$stage[misc_clusters$memb_misc==3] <- 'early'
 misc_clusters$stage[misc_clusters$memb_misc==1] <- 'mid'
 misc_clusters$stage[misc_clusters$memb_misc==4] <- 'early'
 
@@ -814,7 +816,7 @@ swit_occ_abun$unique[swit_occ_abun$otu %in% sw16_clusters$otu[sw16_clusters$stag
 
 misc_occ_abun$unique[!(misc_occ_abun$otu %in% shared)] <- 'Miscanthus 2016 (n=614)' 
 misc_occ_abun$unique[(misc_occ_abun$otu %in% misc_core_OTUs)] <- 'Core (n=24)'
-misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='mid']] <- 'late'
+misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='mid']] <- 'mid'
 misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='late']] <- 'late'
 misc_occ_abun$unique[misc_occ_abun$otu %in% misc_clusters$otu[misc_clusters$stage=='early']] <- 'early'
 
@@ -1022,7 +1024,7 @@ abund_plot_sw16 <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_
                           axis.text.x = element_text(angle=45, hjust = 1),
                           legend.position = 'none') +
   labs(x='Sampling date', y=NULL) +
-  ylim(0,.9)
+  ylim(0,1)
 
 abund_plot_sw17 <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_rare) %>% 
   gather(sequence_name, abun, -otu) %>%  
@@ -1041,7 +1043,7 @@ abund_plot_sw17 <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_
                           axis.text.x = element_text(angle=45, hjust = 1),
                           legend.position = 'none') +
   labs(x=NULL, y=NULL)+
-  ylim(0,.9)
+  ylim(0,1)
 
 abund_plot_mi16 <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_rare) %>% 
   gather(sequence_name, abun, -otu) %>%  
@@ -1059,7 +1061,7 @@ abund_plot_mi16 <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_
                           axis.text.x = element_text(angle=45, hjust = 1),
                           legend.position = 'none') +
   labs(x=NULL, y='Relative\nabundance')+
-  ylim(0,.9)
+  ylim(0,1)
 
 grid.draw(ggarrange(FigC,FigA,FigB,
                     misc16_BC_plot,switch16_BC_plot,switch17_BC_plot, 
@@ -1210,37 +1212,52 @@ heatmap(rel_abun_matrix_sw17,Colv = NA, Rowv = NA,scale="row",
   geom_bar(color='black', stat = 'identity') +
   theme_classic() +
   facet_grid(~plant, scales='free_x') +
-  labs(x='Sampling time', y='Normalized relative abundance')+
+  labs(x='Sampling time', y='Normalized relative\n abundance')+
   theme(axis.text.x = element_text(angle = 45, hjust=1, size=8),
-        legend.position = 'bottom') +
-  guides(fill = guide_legend(ncol = 3, title=NULL)))
+        legend.position = 'bottom',
+        legend.text=element_text(size=8),
+        legend.key.size = unit(.3, "cm")) +
+  guides(fill = guide_legend(ncol = 4, title=NULL)))
 
 
 #Plotting the abundance dynamics of the selected OTUs for Switchgrass and Miscanthus together
 selected_otus %>% 
-  filter(grepl('Alphaproteobacteria|Betaproteobacteria|Deltaproteobacteria|Gammaproteobacteria', Class)) %>%
-  ggplot(aes(x = as.factor(sampling_date), y = abun, fill = plant)) + 
-  geom_boxplot() +
-  scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance", title='Relative abundance dynamics of the selected phyllosphere OTUs') +
-  facet_wrap( ~ as.factor(final_names), scale = 'free_y') +
-  theme_classic() + theme(strip.background = element_blank(),
-                          axis.text.x = element_text(angle=45, hjust = 1),
-                          legend.position = 'none')
-
-selected_otus %>% 
-  filter(otu %in% c('OTU4','OTU430', "OTU18", 'OTU519', 'OTU4223'),
-         source=='phyllosphere') %>%
+  filter(source=='phyllosphere',
+         otu %in% core_list
+         #grepl('Alphaproteobacteria|Betaproteobacteria|Deltaproteobacteria|Gammaproteobacteria', Class)
+         ) %>%
   ggplot(aes(x = as.factor(sampling_date), y = abun, color = plant, group=plant)) + 
   geom_point() +
   stat_smooth(method = "loess") +
   scale_color_manual(values=c('darkgreen','darkolivegreen3')) +
-  labs(x="Sampling times", y= "Relative abundance") +
-  facet_wrap( ~ year+as.factor(Class)+final_names, scale = 'free', ncol=5) +
+  labs(x="Sampling times", y= "Relative abundance", title='Relative abundance dynamics of the selected phyllosphere OTUs') +
+  facet_wrap( ~ otu +year, scale = 'free', ncol=10) +
   theme_classic() + theme(strip.background = element_blank(),
-                          axis.text.x = element_text(angle=45, hjust = 1),
+                          axis.text.x = element_blank(),
                           legend.position = 'none')
 
+(snippet_otu <- selected_otus %>% 
+  filter(otu %in% c('OTU4','OTU2', 'OTU4223'),
+         source=='phyllosphere') %>%
+  mutate(members=if_else(year==2016 & plant =='miscanthus', 'mi', 'sw16'),
+         members=if_else(year==2017 & plant =='switchgrass', 'sw17', members)) %>%
+  ggplot(aes(x = as.factor(sampling_date), y = abun, color = plant, fill = plant, group=members, shape=as.factor(members))) + 
+  geom_point() +
+  stat_smooth(method = "loess") +
+  scale_color_manual(values=c('darkgreen','darkolivegreen3')) +
+  scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
+  labs(x="Sampling times", y= "Relative abundance") +
+  facet_wrap(~ as.factor(Class)+final_names, scale = 'free', ncol=3) +
+  theme_classic() + theme(strip.background = element_blank(),
+                          axis.text.x = element_text(size=8, angle=45, hjust = 1),
+                          legend.position = 'none'))
+
+setEPS()
+postscript('~/Desktop/figure/Figure5.eps', width = 6,height = 7, paper = 'special')
+grid.draw(ggarrange(proteo_plot,
+                    snippet_otu,
+                    heights = 1:2.5))
+dev.off()
 
 ### End Nejc Analysis
 
