@@ -1655,7 +1655,7 @@ Fig1B <- ggplot(Spec_accum_total, aes(x=Date, y=Species_Accumulation)) +
   scale_x_date(date_breaks = "1 month", labels=date_format("%b"))+
   guides(shape=FALSE)
 
-ggsave("Figures/Figure1B_SpeciesAccumulation.eps", Fig1B, device = "eps", width=4, height=4, units = "in")
+ggsave("Figures/Figure1B_SpeciesAccumulation.eps", Fig1B, device = "eps", width=6, height=4, units = "in")
 
 # Plot Miscanthus Evenness Through Season
 switch.Pielou.2016 <- map.alpha.plant.2016[map.alpha.plant.2016$plant=="switchgrass"&map.alpha.plant.2016$variable=="Pielou",]
@@ -1862,7 +1862,7 @@ Ax1.plant <- pcoa.plant$eig[1]/sum(pcoa.plant$eig)
 Ax2.plant <- pcoa.plant$eig[2]/sum(pcoa.plant$eig)
 
 ### Plot Plant PCoA
-Figure2B <- ggplot(plant.points.collapsed, aes(x=Axis1, y=Axis2))+
+Fig2B <- ggplot(plant.points.collapsed, aes(x=Axis1, y=Axis2))+
   geom_point(aes(size=Week, color=plant, shape=Year)) +
   scale_color_manual(values=c("darkolivegreen3","darkgreen"))+
   scale_shape_manual(values = c(19,1))+
@@ -1926,6 +1926,32 @@ Fig2A <- ggplot(points.whole, aes(x=Axis1, y=Axis2))+
         panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 ggsave("Figures/Figure2A_WholePCoA_NoLegend.eps", Fig2A, width = 6, height = 6, device = "eps", units="in")
+
+
+Fig2A_leg <- ggplot(points.whole, aes(x=Axis1, y=Axis2))+
+  coord_fixed()+
+  geom_point(aes(shape=SampleType, color=plant, size=Week, fill=PlantYear))+
+  scale_shape_manual(values = c(22,23,21))+
+  scale_size_manual(values=Point_Sizes)+
+  scale_color_manual(values=c("darkolivegreen3","darkgreen"))+
+  scale_fill_manual(values=c("darkgreen", "darkolivegreen3","NA"))+
+  xlab(label = paste(round(Ax1.whole, 3)*100, "% Var. Explained", sep=""))+
+  ylab(label= paste(round(Ax2.whole, 3)*100, "% Var. Explained", sep=""))+
+  theme(legend.position = "right", legend.box = "horizontal")+
+  guides(fill=guide_legend(override.aes=list(shape=21, color=c(miscanthus2016="darkgreen",switchgrass2016="darkolivegreen3", switchgrass2017="darkolivegreen3"),fill=c(miscanthus2016="darkgreen",switchgrass2016="darkolivegreen3", switchgrass2017="white"), size=5)), color=FALSE, shape=guide_legend(override.aes = list(size=5)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+Fig2_Legend <- get_legend(Fig2A_leg)
+
+setEPS()
+postscript("Figures/Figure2.eps", width=10, height=10,pointsize=10, paper="special")
+plot_grid(plot_grid(Fig2B, Fig2A, align = "h"), Fig2_Legend, ncol=1)
+dev.off()
+
+
+
+library(cowplot)
 
 GenSciLegend <- ggplot(points.whole, aes(x=Axis1, y=Axis2))+
   coord_fixed()+
@@ -2183,7 +2209,7 @@ HOST <- 1*(map_16S[map_16S$source=="phyllosphere"&map_16S$year==2016, "plant"]==
 TIME <- map_16S[map_16S$source=="phyllosphere"&map_16S$year==2016, "time_numeric"]
 
 cca_core.rel <- varpart(Y=t(Plant_Core_OTU.rel), HOST, ABIOTIC, TIME, chisquare = TRUE)
-plot(cca_core.rel, Xnames=c("HOST.rel", "ABIOTIC.rel", "TIME.rel"), cutoff=-1, main="Relativized")
+plot(cca_core.rel, Xnames=c("HOST.rel", "ABIOTIC.rel", "TIME.rel"), main="Relativized")
 
 cca_core <- varpart(Y=t(Plant_Core_OTU), HOST, ABIOTIC, TIME, chisquare = TRUE)
 plot(cca_core, Xnames=c("HOST", "ABIOTIC", "TIME"), cutoff=-1)
@@ -2195,6 +2221,9 @@ plot(rda_core, Xnames=c("HOST", "ABIOTIC", "TIME"), cutoff=-1)
 Whole <- varpart(Y=plant.dist.2016, HOST, ABIOTIC, TIME)
 Core2016Partition <- varpart(Y=Plant_Core.dist, HOST, ABIOTIC, TIME)
 Core2016Partition
+
+cca_core.rel.2 <- varpart(Y=t(Plant_Core_OTU.rel), HOST, ABIOTIC_Bigger, TIME, chisquare = TRUE)
+plot(cca_core.rel.2, Xnames=c("HOST.rel", "ABIOTIC.rel", "TIME.rel"), main="Relativized",cutoff=-1)
 
 
 plot(Whole, Xnames=c("HOST", "ABIOTIC", "TIME"), cutoff=-1)
@@ -2380,12 +2409,10 @@ points.soil$Week <- map.soil$Week.x
 points.soil$Plant <- map.soil$plant
 points.soil$SourceFert <- paste(map.soil$source, map.soil$treatment)
 points.soil$SourceFert <- factor(points.soil$SourceFert, levels=c("soil standard fertilization", "soil nitrogen free", "phyllosphere"))
-points.soil$SampleType <- points.soil$SourceFert
+points.soil$PlantYear <- factor(paste(map.soil$plant, map.soil$Year, sep=""), levels=c("miscanthus2016", "switchgrass2016", "switchgrass2017"))
 
 points.soil$Week <- as.factor(points.soil$Week)
 
-points.soil$PlantYear <- paste(map.soil$plant, map.soil$Year, sep="")
-points.soil$PlantYear <- factor(points.soil$PlantYear, levels=c("miscanthus2016", "switchgrass2016", "switchgrass2017"))
 
 soil.envfit <- envfit(pcoa.soil$points, soil.context)
 
@@ -2410,11 +2437,12 @@ Ax1.soil <- pcoa.soil$eig[1]/sum(pcoa.soil$eig)
 Ax2.soil <- pcoa.soil$eig[2]/sum(pcoa.soil$eig)
 colnames(points.soil)<- c("Axis1", "Axis2", "Week", "Plant", "SourceFert", "PlantYear", "SampleType")
 
+levels(points.soil$SampleType)
 
 ### ggplot Whole PCoA
-FigS2B <- ggplot(points.soil, aes(x=Axis1, y=Axis2))+
+FigureS2C <- ggplot(points.soil, aes(x=Axis1, y=Axis2))+
   coord_fixed()+
-  geom_point(aes(shape=SampleType, color=Plant, size=Week, fill=PlantYear))+
+  geom_point(aes(shape=SourceFert, color=Plant, size=Week, fill=PlantYear))+
   scale_shape_manual(values = c(22,23,21))+
   scale_size_manual(values=Point_Sizes)+
   scale_color_manual(values=c("darkgreen", "darkolivegreen3"))+
@@ -2430,7 +2458,7 @@ FigS2B <- ggplot(points.soil, aes(x=Axis1, y=Axis2))+
         panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 
-multiplot(Figure2B, Fig2A, FigS2B, cols=2)
+
 
 
 #######################
@@ -2777,25 +2805,55 @@ points.141 <- left_join(points.141, Date_to_Week, by="sampling_date")
 points.141$Week <- factor(points.141$Week, levels=c(1:10))
 points.141$SourceYear <- paste(points.141$source,points.141$Year, sep="")
 points.141$SourceYear <- factor(points.141$SourceYear, levels=unique(points.141$SourceYear))
+points.141$Treatment <- map.141$treatment
+
+
+points.141$SampleType <- map.141$source
+points.141$SampleType[points.141$SampleType=="soil"] <- paste(map.141$source[points.141$source=="soil"], map.141$treatment[points.141$source=="soil"]) 
+
+points.141$SampleType <- factor(points.141$SampleType, levels=c("soil standard fertilization", "soil nitrogen free", "phyllosphere"))
+
+points.141$PlantYear <- factor(paste(map.141$plant, map.141$year, sep=""), levels=c("miscanthus2016", "switchgrass2016", "switchgrass2017"))
 
 ### Determine % variation explained on each axis
 Ax1.whole.141 <- pcoa.otu.141$eig[1]/sum(pcoa.otu.141$eig)
 Ax2.whole.141 <- pcoa.otu.141$eig[2]/sum(pcoa.otu.141$eig)
 
+
+
 ### ggplot Whole PCoA
-FigS2A <- ggplot(points.141, aes(x=Axis1, y=Axis2))+
+FigureS2B <- ggplot(points.141, aes(x=Axis1, y=Axis2))+
   coord_fixed()+
-  geom_point(aes(shape=SourceYear, color=plant, size=Week))+
-  scale_shape_manual(values = c(16,15,1,0))+
+  geom_point(aes(shape=SampleType, color=plant, size=Week, fill=PlantYear))+
+  scale_shape_manual(values = c(22,23,21))+
   scale_size_manual(values=Point_Sizes)+
   scale_color_manual(values=c("darkolivegreen3","darkgreen"))+
+  scale_fill_manual(values=c("darkgreen", "darkolivegreen3", "white"))+
   xlab(paste(round(Ax1.whole.141, 3)*100, "% Var. Explained", sep=""))+
   ylab(paste(round(Ax2.whole.141, 3)*100, "% Var. Explained", sep=""))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-      panel.background = element_blank(), axis.line = element_line(colour = "black"))#+
-  #theme(legend.position = "none")
+      panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  theme(legend.position = "none")
 
-ggsave("Figures/FigureS2A_WholePCoALegend.eps", FigS2A, width = 6, height = 6, device = "eps", units="in")
+guides(fill=guide_legend(override.aes=list(shape=21, colour=c(Miscanthus2016="darkgreen",Switchgrass2016="darkolivegreen3", Switchgrass2017="white"), size=5)), color=FALSE, shape=guide_legend(override.aes = list(size=5)))
+
+FigureS2_Legend <- ggplot(points.141, aes(x=Axis1, y=Axis2))+
+  coord_fixed()+
+  geom_point(aes(shape=SampleType, color=plant, size=Week, fill=PlantYear))+
+  scale_shape_manual(values = c(22,23,21))+
+  scale_size_manual(values=Point_Sizes)+
+  scale_color_manual(values=c("darkolivegreen3","darkgreen"))+
+  scale_fill_manual(values=c("darkgreen", "darkolivegreen3", "white"))+
+  xlab(paste(round(Ax1.whole.141, 3)*100, "% Var. Explained", sep=""))+
+  ylab(paste(round(Ax2.whole.141, 3)*100, "% Var. Explained", sep=""))+
+  theme(legend.position = "right", legend.box = "horizontal")+
+  guides(fill=guide_legend(override.aes=list(shape=21, color=c(miscanthus2016="darkgreen",switchgrass2016="darkolivegreen3", switchgrass2017="darkolivegreen3"),fill=c(miscanthus2016="darkgreen",switchgrass2016="darkolivegreen3", switchgrass2017="white"), size=5)), color=FALSE, shape=guide_legend(override.aes = list(size=5)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+legend_S2 <- get_legend(FigureS2_Legend)
+
+#ggsave("Figures/FigureS2A_WholePCoALegend.eps", FigS2A, width = 6, height = 6, device = "eps", units="in")
 
 
 ### For Figure S2B
@@ -2907,28 +2965,30 @@ Point_Sizes.141 <- seq(from=2, to=6, length.out = 10)
 Ax1.plant.141 <- pcoa.plant.141$eig[1]/sum(pcoa.plant.141$eig)
 Ax2.plant.141 <- pcoa.plant.141$eig[2]/sum(pcoa.plant.141$eig)
 
+plant.points.collapsed.141$PlantYear <- factor(paste(plant.points.collapsed.141$plant,plant.points.collapsed.141$Year, sep=""), levels=c("Miscanthus2016", "Switchgrass2016", "Switchgrass2017"))
+
 ### Plot Plant PCoA
-FigureS2B <- ggplot(plant.points.collapsed.141, aes(x=Axis1, y=Axis2))+
-  geom_point(aes(size=Week, color=plant, shape=Year)) +
+FigureS2A <- ggplot(plant.points.collapsed.141, aes(x=Axis1, y=Axis2))+
+  geom_point(aes(size=Week, color=plant, fill=PlantYear),shape=21) +
   scale_color_manual(values=c("darkolivegreen3","darkgreen"))+
-  scale_shape_manual(values = c(19,1))+
+  scale_fill_manual(values=c("darkgreen","darkolivegreen3", "white"))+
   scale_size_manual(values=Point_Sizes)+
   coord_fixed()+
   geom_segment(data=plant.points.collapsed.141, aes(x=Axis1,xend=Axis1+sd_axis1,y=Axis2,yend=Axis2,color=plant ))+
   geom_segment(data=plant.points.collapsed.141, aes(x=Axis1,xend=Axis1-sd_axis1,y=Axis2,yend=Axis2,color=plant))+
   geom_segment(data=plant.points.collapsed.141, aes(x=Axis1,xend=Axis1,y=Axis2,yend=Axis2+sd_axis2,color=plant))+
   geom_segment(data=plant.points.collapsed.141, aes(x=Axis1,xend=Axis1,y=Axis2,yend=Axis2-sd_axis2,color=plant))+
-  xlab(label = paste(round(Ax1.plant,digits = 3)*100, "% Var. Explained", sep = ""))+
-  ylab(label= paste(round(Ax2.plant,digits = 3)*100, "% Var. Explained", sep = ""))+
+  xlab(label = paste(round(Ax1.plant.141,digits = 3)*100, "% Var. Explained", sep = ""))+
+  ylab(label= paste(round(Ax2.plant.141,digits = 3)*100, "% Var. Explained", sep = ""))+
   geom_segment(data = envfit.phyllo.sub.141,
                aes(x = 0, xend = Axis1, y = 0, yend = Axis2),
                arrow = arrow(length = unit(0.25, "cm")), colour = "grey")+
   geom_text(data=envfit.phyllo.sub.141, aes(label=Variable))+
-  theme(panel.grid.major = element_blank(), panel.grid.500or = element_blank(),
+  theme(panel.grid.major = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   theme(legend.position = "none")
 
-ggsave(filename = "Figures/FigureS2B_PhyllospherePCoA141.eps", FigureS2B, device = "eps", height = 6, width = 6, units = "in")
+#ggsave(filename = "Figures/FigureS2B_PhyllospherePCoA141.eps", FigureS2B, device = "eps", height = 6, width = 6, units = "in")
 
 soil.dist <- vegdist(t(otu_soil_rare), method="bray")
 soil.dist.2016 <- vegdist(t(otu.soil.rare.2016), method="bray")
@@ -3004,32 +3064,14 @@ R40_weather_soil.env.2016 <- envfit(Collapsed_Soil.2016[,c(1,3)], R40_weather_so
 
 library(lubridate)
 
-### Set point colors based on plant (Dark == Miscanthus, light == Switchgrass)
-soil_plot_colors.2016 <- rep("burlywood4", nrow(map.soil.2016))
-soil_plot_colors.2016[map.soil.2016$plant=="switchgrass"] <- "burlywood"
-
-### Set point shapes based on plant (Squares == Miscanthus, Circles ==Switchgrass, open== Nitrogen Free)
-soil_plot_shapes.2016 <- rep(15, nrow(map.soil.2016))
-soil_plot_shapes.2016[map.soil.2016$plant=="switchgrass"] <- 16
-soil_plot_shapes.2016[map.soil.2016$plant=="switchgrass"& map.soil.2016$treatment=="nitrogen free"] <- 1
-soil_plot_shapes.2016[map.soil.2016$plant=="miscanthus"&map.soil.2016$treatment=="nitrogen free"] <- 0
-
-### Set point sizes based on date (Smaller symbols earlier in season)
-soil_plot_size.2016 <- rep(1, nrow(map.soil.2016))
-for (i in 1:length(dates.2016)){
-  soil_plot_size.2016[map.soil.2016$sampling_date==dates.2016[i]] <- Point_Sizes[i]
-}
-
 setEPS()
-postscript("Figures/FigureS2C_Soil2016.eps", width=5, height=5,pointsize=10, paper="special",)
-par(mar = c(5.1, 5.1, 2.1, 2.1))
-Soil_PcoA_Plot.2016 <- plot(soil.pcoa.2016$points[,1], soil.pcoa.2016$points[,2], pch=soil_plot_shapes.2016, col=soil_plot_colors.2016, cex=soil_plot_size.2016, cex.axis=1.6, cex.lab=1.6, xlab=paste("PCoA1: ",100*round(ax1.soil.2016,3),"% var. explained",sep=""), ylab=paste("PCoA2: ",100*round(ax2.soil.2016,3),"% var. explained",sep=""))+
-  #text(soil.pcoa$points[,1], soil.pcoa$points[,2], map.soil$month, pos=4,  font=2)+
-  plot(R40_SC_Soil.env.2016, p=0.05, col="black")+
-  plot(R40_weather_soil.env.2016, p=0.05, col="black")
+postscript("Figures/FigureS2.eps", width=10, height=10,pointsize=10, paper="special",)
+plot_grid(FigureS2A,FigureS2B, FigureS2C,  legend_S2, axis="bl")
 dev.off()
 
+align = "h", label_size = 10, labels = c("A", "B", "C") 
 
+plot_grid(plot_grid(FigureS2A, FigureS2B, ncol=2, align = "h"), plot_grid(FigureS2C, legend_S2, ncol=2, align="h"), ncol=1, align = "v")
 
 ####################################################
 ### Look at betadispersion of crops through time ###
@@ -3166,7 +3208,7 @@ Phyllo_PWD <- ggplot(pairwise.distance, aes(x=Date, y=value))+
 
 ggsave("Figures/FigureS4_BCBtwnCrops.eps", Phyllo_PWD, device = "eps", width = 6, height = 6, units = "in")
 
-
+library(limma)
 venn_switch.2016 <- 1*rowSums(switch.rare.otu.2016)>0
 venn_misc.2016 <-  1*rowSums(misc_rare_otu.2016)>0
 venn_switch.2017 <- 1*rowSums(switch.rare.otu.2017)>0
@@ -3206,6 +3248,23 @@ Phyllo_PWD.141 <- ggplot(pairwise.141.distance, aes(x=Date, y=value))+
 
 ggsave("Figures/FigureS4_BCBtwnCrops.141.eps", Phyllo_PWD.141, device = "eps", width = 6, height = 6, units = "in")
 
+
+pairwise.141.distance$Reads <- rep("141 Reads", nrow(pairwise.141.distance))
+pairwise.distance$Reads <- rep("1,000 Reads", nrow(pairwise.distance))
+
+pwd.combined <- rbind(pairwise.141.distance, pairwise.distance)
+
+pwd.combined$Reads <- factor(pwd.combined$Reads, levels=c("141 Reads", "1,000 Reads"))
+
+FigureS5 <- ggplot(pwd.combined, aes(x=Date, y=value))+
+  geom_violin()+
+  geom_point()+
+  facet_grid(cols=vars(Reads))+
+  ylab(label = "Bray Curtis Dissimilarity between Miscanthus and Switchgrass")+
+  theme(axis.text.x = element_text(angle=60, size=8, vjust = 1, hjust = 1), axis.title.x=element_text(size=10), axis.title.y = element_text(size=10))
+
+ggsave(filename = "Figures/FigureS5_BCDissimilarity.eps", width=8, height = 5, units = "in", device = "eps")
+
 #################################
 ### Variance Partitioning 141 ###
 #################################
@@ -3228,6 +3287,9 @@ sig_colinear.141 <- colinearity_time.141[colinearity_time.141$pvalue<0.05, 1]
 
 reduced_var_part_ABIOTIC.141 <- var_part_map.141[,!colnames(var_part_map.141)%in%sig_colinear.141]
 ABIOTIC.141 <- reduced_var_part_ABIOTIC.141
+
+ABIOTIC_Bigger <- var_part_map[,!colnames(var_part_map)%in%sig_colinear.141]
+
 
 reduced_sample_names.141 <- unlist(strsplit(colnames(plant.141.otu.2016), split="_"))
 
@@ -3269,8 +3331,8 @@ Plant_Core_OTU.141.rel.1kmatch <- Plant_Core_OTU.141.rel[,colnames(Plant_Core_OT
 
 colnames(Plant_Core_OTU.141.rel.1kmatch) == map.plant.2016$sequence_name
 
-ak <- varpart(Y=t(Plant_Core_OTU.141.rel.1kmatch), HOST, TIME, ABIOTIC)
-plot(ak, Xnames=c("HOST", "TIME", "ABIOTIC"))
+ak <- varpart(Y=t(Plant_Core_OTU.141.rel.1kmatch), HOST, ABIOTIC, TIME)
+plot(ak, Xnames=c("HOST", "ABIOTIC", "TIME"))
 
 
 
