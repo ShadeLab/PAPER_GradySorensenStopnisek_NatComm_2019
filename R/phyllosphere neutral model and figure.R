@@ -3,7 +3,7 @@
 #### setup ####
 
 #setwd
-wd <- ''
+wd <- 'C:\\Users\\John\\Documents\\msu\\phyllosphere_soil_metacommunity\\PAPER_GradySorensenStopnisek_InPrep\\R'
 setwd(wd)
 library(tidyverse)
 library(data.table)
@@ -12,7 +12,7 @@ library(vegan)
 library(cowplot)
 
 #load metadata
-meta_all <- read.table('InputFiles\\Map_GLBRC_16S.txt', sep = '\t') %>% 
+meta <- read.table('InputFiles\\Map_GLBRC_16S.txt', sep = '\t') %>% 
   transmute(
     plot = plotID, 
     sp = plant,
@@ -30,8 +30,14 @@ otus <- read.table('InputFiles\\Rarefied_OTU_JacksonMarch11.txt', sep = '\t', he
 otus <- data.frame(otu = row.names(otus), otus) %>%
   gather(sample, abun, -otu)
 
+#remove redundant samples; G5R3_NF_09MAY2016_LD2 is taken at the same time/place as G5R3_NF_09MAY2016_LD1; 
+#G5R4_MAIN_12SEP2016_LD2
+otus_unrarefied <- filter(otus_unrarefied, !sample == 'G5R3_NF_09MAY2016_LD2')
+otus <- filter(otus, !sample == 'G5R3_NF_09MAY2016_LD2')
+meta <- filter(meta_all, sample %in% otus$sample)
+
 #load cores from Nejc
-cores <- read.csv('InputFiles\\core.csv', row.names = 1)
+cores <- read.csv('InputFiles\\core_taxa.csv', stringsAsFactors = FALSE)
 
 #create soil pool -- all samples combined over both years
 soilpool <- otus_unrarefied %>% 
@@ -158,19 +164,19 @@ comms <- comms %>%
 # 4) append and loop over until all dates/plots are simulated
 
 #for each community-plot
-if(TRUE) {
+if (TRUE) {
   for(i in 1:length(comms)) {
   
     #print progress
     print(paste(i, 'of', length(comms))); flush.console()
     
     #rename for convenience and clean up
-    j <- comms[[i]] %>% rename(date0 = date) %>% select(-by)
+    j <- comms[[i]] %>% rename(date0 = date) %>% select(-by) %>% mutate_if(is.factor, as.character)
     
     #determine how many increases/decreases there will be
     diffs <- j %>%
       left_join(transmute(abun_shifts, plot, year, date0, diff), by = c("plot", "date0", "year")) %>%
-      summarise(diff = unique(diff)) %>%
+      summarise(diff = length(diff)) %>%
       pull(unique(diff))
     
     #determine how many immigrants are slated to arrive
@@ -356,8 +362,8 @@ relabun <- j %>%
   spread(group, relabun) %>%
   mutate(
     plant_relabun = (miscanthus_relabun + switchgrass_relabun) / 2,
-    mcore = otu %in% cores$otu[cores$plant == 'misc'],
-    score = otu %in% cores$otu[cores$plant != 'misc']) %>%
+    mcore = otu %in% cores$OTU[cores$plant == 'm16'],
+    score = otu %in% cores$OTU[cores$plant != 'm16']) %>%
   select(-plant_relabun) %>%
   rename(miscanthus = miscanthus_relabun, switchgrass = switchgrass_relabun) %>%
   gather(sp, relabun, miscanthus, switchgrass)
@@ -423,7 +429,7 @@ p <- ggplot(tmp, aes(y = observed - neutral_prediction, x = date, group = date))
     plot.margin = unit(c(0, 0, 0, 0), "pt"),
     plot.title = element_text(hjust = 0.5))
 
-#panel a
+#panel d
 p4 <- p %+% filter(tmp, group == 'Miscanthus 2016') + 
   scale_x_date(breaks = datez1, date_labels = "%b '%y") +
   expand_limits(y = c(-92,16), x = range(j$year_date)) +
@@ -451,10 +457,10 @@ p6 <- p %+% filter(tmp, group == 'Switchgrass 2017') +
   labs(x = '', y = '', tag = 'f')
 
 
-#put it together and save PDF figure
+#put it together and save PDF figure``
 fig_combine <- function(){}
 
 ps <- plot_grid(p1, p2, p3, p4, p5, p6, ncol = 3, align = 'hv')
 pss <- plot_grid(ps, myleg, ncol = 1, rel_heights = c(1, .08))
 pss
-ggsave('Figures\\fig.pdf', width = 8, height = 5)
+ggsave('Figures\\Fig3_SoilPhyllosphere.pdf', width = 8, height = 5)
