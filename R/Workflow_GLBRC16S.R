@@ -205,7 +205,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-<- <- <- <- <- <-       
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
@@ -528,6 +527,7 @@ sw17_BC_plot <- ggplot(plot_sw17_BC_ranked[1:75,],aes(x=factor(plot_sw17_BC_rank
   geom_vline(xintercept=c(20.5), lty=3, col='red', cex=.5) +
   scale_y_continuous(sec.axis = sec_axis(~.*5))
 
+plot_sw17_BC_ranked[plot_sw17_BC_ranked$IncreaseBC>=1.02,]
 sw17_core_OTUs <- sw17_ranked$otu[1:20]
 
 #Miscanthus 2016
@@ -589,6 +589,7 @@ mi_BC_plot <- ggplot(plot_mi_BC_ranked[1:75,],aes(x=factor(plot_mi_BC_ranked$ran
                           axis.title.x = element_blank(), axis.title.y = element_blank()) +
   scale_y_continuous(sec.axis = sec_axis(~.*5))
 
+plot_mi_BC_ranked[plot_mi_BC_ranked$IncreaseBC>=1.02,]
 misc_core_OTUs <- mi_ranked$otu[1:24]
 
 #*********************
@@ -604,18 +605,19 @@ dev.off()
 ###################
 
 core_list <- unique(c(misc_core_OTUs,sw_core_OTUs,sw17_core_OTUs))
-str(tax_filtered)
-colors_core <-tax_filtered[c(1,10, 3,4)][tax_filtered$otu %in% core_list,]
-colors_core$color <- 'black'
-colors_core$color[colors_core$Class == 'c:Alphaproteobacteria'] <- 'green'
-colors_core$color[colors_core$Class == 'c:Betaproteobacteria'] <- 'blue'
-colors_core$color[colors_core$Class == 'c:Gammaproteobacteria'] <- 'purple'
-colors_core$color[colors_core$Class == 'c:Cytophagia'] <- 'orange'
-colors_core$color[colors_core$Class == 'c:Actinobacteria'] <- 'red'
-colors_core$color[colors_core$Class == 'c:Sphingobacteriia'] <- 'grey'
-write.csv(colors_core, '~/Desktop/figure/core_color.csv')
-write.csv(misc_core_OTUs, '~/Desktop/figure/miscanthus_core.csv')
-write.csv(sw_core_OTUs, '~/Desktop/figure/switchgrass_core.csv')
+list_of_core_taxa <- data.frame(colnames=c('plant', 'OTU'), OTU=misc_core_OTUs,sw_core_OTUs,sw17_core_OTUs)
+list_of_core_taxa <- tax_filtered[tax_filtered$otu %in% core_list,]
+list_of_core_taxa$color <- 'black'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Alphaproteobacteria"] <- 'green'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Betaproteobacteria"] <- 'blue'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Gammaproteobacteria"] <- 'purple'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Cytophagia"] <- 'orange'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Sphingobacteriia"] <- 'grey'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Actinobacteria"] <- 'red'
+list_of_core_taxa$color[list_of_core_taxa$Class == "c:Flavobacteriia"] <- 'yellow'
+list_of_core_taxa[c(4,10,11)]
+write.csv(list_of_core_taxa[c(4,10,11)],'~/Desktop/core_colors.csv')
+
 
 # core_list <- read.csv('../../../../../Desktop/core.csv')
 # misc_core_OTUs <- as.character(core_list$otu[core_list$plant=='misc'])
@@ -649,6 +651,8 @@ selected_otus_switch %>%
                    sd_rep=sd(abun)
   ) %>%
   filter(n>0) -> temp
+
+
 
 #df with stats for the whole dataset per OTU
 selected_otus_switch %>%
@@ -697,14 +701,12 @@ z_df_misc %>% arrange(otu) %>%
   ) %>%
   arrange(Class, Family) -> temp6
 
-temp6[temp6$otu == 'OTU1674',]
-
 #*******************
 #Switchgrass 2017
 #OTU mean abundance per sampling time 
 selected_otus_switch17 %>%
   filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017) %>%
-  group_by(sampling_date, otu, Class, Order, Family, Genus) %>%
+  group_by(sampling_date, otu, Class, Order, Family, Genus, final_names) %>%
   dplyr::summarise(n=sum(abun>0)/length(abun),
                    all=length(abun),
                    rep_ab=mean(abun),
@@ -715,7 +717,7 @@ selected_otus_switch17 %>%
 #df with stats for the whole dataset per OTU
 selected_otus_switch17 %>%
   filter(source == 'phyllosphere' & plant == 'switchgrass' & year == 2017) %>%
-  group_by(otu) %>%
+  group_by(otu, final_names) %>%
   dplyr::summarise(
     all_ab=mean(abun),
     all_sd=sd(abun)
@@ -742,12 +744,12 @@ memb_sw16 <- cutree(clusters_switch16, k=3)
 sw16_dend <- plot(clusters_switch16, main=NULL)
 rect.hclust(clusters_switch16, k=3)
 
-switch17_core <- tmp9[,c(1,2,13)]
+switch17_core <- tmp9[,c(1,2,14)]
 switch17_core <- as.data.frame(switch17_core)
 switch17_core_wide <- spread(switch17_core, key='sampling_date', value='z_score')
 switch17_core_wide[is.na(switch17_core_wide)] <- 0
 rownames(switch17_core_wide) <- switch17_core_wide$otu
-switch17_core_wide$final_names <-  NULL
+switch17_core_wide$otu <-  NULL
 set.seed(21)
 clusters_switch17 <- hclust(dist(switch17_core_wide),'complete')
 memb_sw17 <- cutree(clusters_switch17, k=3)
@@ -1192,7 +1194,7 @@ heatmap(rel_abun_matrix_sw17,Colv = NA, Rowv = NA,scale="row",
 #Suppl Fig - Dynamics of the OTUs classified as Alpha and Gamma proteobacteria
 ###############################################################
 (proteo_plot <- data.frame(otu = as.factor(row.names(otu_rare)), otu_rare) %>% gather(sequence_name, abun, -otu) %>%
-  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'year'
+  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'year','sampling_week'
   )], by = 'sequence_name') %>%
   left_join(tax_filtered, by='otu') %>%
   filter(grepl('Alphaproteobacteria|Betaproteobacteria|Deltaproteobacteria|Gammaproteobacteria', Class)) %>%
@@ -1202,22 +1204,38 @@ heatmap(rel_abun_matrix_sw17,Colv = NA, Rowv = NA,scale="row",
   mutate(class=if_else(class=='Betaproteobacteria','c:Betaproteobacteria', class)) %>%
   mutate(class=if_else(class=='Gammaproteobacteria','c:Gammaproteobacteria', class)) %>%
   mutate(class=if_else(class=='Deltaproteobacteria','c:Deltaproteobacteria', class)) %>%
-  group_by(plant, class, sampling_date) %>%
+  group_by(plant, class, year,sampling_week) %>%
   summarise(n=sum(abun),
             n_reps=length(unique(sequence_name))) %>%
-  group_by(plant, sampling_date) %>%
+  group_by(plant, year,sampling_week) %>%
   mutate(total_reads=sum(n),
          rel_abun=n/total_reads) %>%
-  ggplot(aes(x=as.factor(sampling_date), y=rel_abun, fill=class)) +
+  ggplot(aes(x=as.factor(sampling_week), y=rel_abun, fill=class)) +
   geom_bar(color='black', stat = 'identity') +
   theme_classic() +
-  facet_grid(~plant, scales='free_x') +
-  labs(x='Sampling time', y='Normalized relative\n abundance')+
-  theme(axis.text.x = element_text(angle = 45, hjust=1, size=8),
+  facet_grid(~factor(plant, levels=c("miscanthus","switchgrass","switchgrass"), labels=c("miscanthus","switchgrass","switchgrass"))+year) +
+  labs(x='Sampling week', y='Normalized relative\n abundance')+
+  theme(axis.text.x = element_text(size=8),
         legend.position = 'bottom',
         legend.text=element_text(size=8),
         legend.key.size = unit(.3, "cm")) +
   guides(fill = guide_legend(ncol = 4, title=NULL)))
+
+data.frame(otu = as.factor(row.names(otu_rare)), otu_rare) %>% gather(sequence_name, abun, -otu) %>%
+  left_join(map_16S[, c('sequence_name','rep','treatment' ,'source', 'plant', 'sampling_date', 'year','sampling_week'
+  )], by = 'sequence_name') %>%
+  filter(source=='phyllosphere') %>%
+  left_join(tax_filtered, by='otu') %>%
+  filter(grepl('Alphaproteobacteria|Betaproteobacteria|Deltaproteobacteria|Gammaproteobacteria', Class)) %>%
+  mutate(plant = factor(plant, levels = c('switchgrass', 'miscanthus'))) %>%
+  mutate(class=if_else(Class=='Alphaproteobacteria','c:Alphaproteobacteria', Class)) %>%
+  mutate(class=if_else(class=='Betaproteobacteria','c:Betaproteobacteria', class)) %>%
+  mutate(class=if_else(class=='Gammaproteobacteria','c:Gammaproteobacteria', class)) %>%
+  mutate(class=if_else(class=='Deltaproteobacteria','c:Deltaproteobacteria', class)) %>%
+  group_by(Phylum, otu) %>%
+  summarise(n=sum(abun)) %>% 
+  filter(n>0) %>%
+  summarise(n_sum=sum(n))
 
 
 #Plotting the abundance dynamics of the selected OTUs for Switchgrass and Miscanthus together
@@ -1241,16 +1259,18 @@ selected_otus %>%
          source=='phyllosphere') %>%
   mutate(members=if_else(year==2016 & plant =='miscanthus', 'mi', 'sw16'),
          members=if_else(year==2017 & plant =='switchgrass', 'sw17', members)) %>%
-  ggplot(aes(x = as.factor(sampling_date), y = abun, color = plant, fill = plant, group=members, shape=as.factor(members))) + 
+  left_join(map_16S[,c('sequence_name','sampling_week')], by = 'sequence_name') %>%
+  ggplot(aes(x = as.factor(sampling_week), y = abun, color = plant, fill = plant, group=members)) + 
   geom_point() +
   stat_smooth(method = "loess") +
   scale_color_manual(values=c('darkgreen','darkolivegreen3')) +
   scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
   labs(x="Sampling times", y= "Relative abundance") +
-  facet_wrap(~ as.factor(Class)+final_names, scale = 'free', ncol=3) +
+  facet_wrap(year ~ as.factor(Class)+final_names, scale = 'free_y', ncol=3) +
   theme_classic() + theme(strip.background = element_blank(),
-                          axis.text.x = element_text(size=8, angle=45, hjust = 1),
-                          legend.position = 'none'))
+                          axis.text.x = element_text(size=8),
+                          legend.position = 'none',
+                          strip.text.x = element_blank()))
 
 setEPS()
 postscript('~/Desktop/figure/Figure5.eps', width = 6,height = 7, paper = 'special')
@@ -1258,6 +1278,25 @@ grid.draw(ggarrange(proteo_plot,
                     snippet_otu,
                     heights = 1:2.5))
 dev.off()
+
+selected_otus %>% 
+  filter(source=='phyllosphere',
+         Genus == 'g:Hymenobacter') %>%
+  mutate(members=if_else(year==2016 & plant =='miscanthus', 'mi', 'sw16'),
+         members=if_else(year==2017 & plant =='switchgrass', 'sw17', members)) %>%
+  left_join(map_16S[,c('sequence_name','sampling_week')], by = 'sequence_name') %>%
+  ggplot(aes(x = as.factor(sampling_week), y = abun, color = plant, fill = plant, group=members)) + 
+  geom_point() +
+  stat_smooth(method = "loess") +
+  scale_color_manual(values=c('darkgreen','darkolivegreen3')) +
+  scale_fill_manual(values=c('darkgreen','darkolivegreen3')) +
+  labs(x="Sampling times", y= "Relative abundance") +
+  facet_wrap(year ~ otu, scale = 'free_y', ncol=6) +
+  theme_classic() + theme(strip.background = element_blank(),
+                          axis.text.x = element_text(size=8),
+                          legend.position = 'none',
+                          strip.text.x = element_blank())
+
 
 ### End Nejc Analysis
 
