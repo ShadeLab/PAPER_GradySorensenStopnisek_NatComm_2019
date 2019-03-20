@@ -32,8 +32,8 @@ otus <- data.frame(otu = row.names(otus), otus) %>%
 
 #remove redundant samples; G5R3_NF_09MAY2016_LD2 is taken at the same time/place as G5R3_NF_09MAY2016_LD1; 
 #G5R4_MAIN_12SEP2016_LD2
-otus_unrarefied <- filter(otus_unrarefied, !sample == 'G5R3_NF_09MAY2016_LD2')
-otus <- filter(otus, !sample == 'G5R3_NF_09MAY2016_LD2')
+otus_unrarefied <- filter(otus_unrarefied, !sample %in% c('G5R3_NF_09MAY2016_LD2', 'G5R3_NF_09MAY2016_LD2'))
+otus <- filter(otus, !sample %in% c('G5R3_NF_09MAY2016_LD2', 'G5R3_NF_09MAY2016_LD2'))
 meta <- filter(meta_all, sample %in% otus$sample)
 
 #load cores from Nejc
