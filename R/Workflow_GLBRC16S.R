@@ -809,23 +809,23 @@ misc_clusters$stage[misc_clusters$memb_misc==6] <- 'late'
 misc_clusters$stage[misc_clusters$memb_misc==7] <- 'early'
 misc_clusters$stage[misc_clusters$memb_misc==8] <- 'early'
 
-sw_color$plant <- 'sw16'
-colnames(sw_color)[1] <-'memb'
-sw_color <- sw_color[,-c(1,3)]
-
-sw17_color$plant <- 'sw17'
-colnames(sw17_color)[1] <-'memb'
-sw17_color <- sw17_color[,-c(1,3)]
-
-misc_color$plant <- 'misc'
-colnames(misc_color)[1] <-'memb'
-misc_color <- misc_color[,-c(1,3)]
-
-library(tidyr)
-core_list <- rbind(sw_color, sw17_color, misc_color)
-core_list[is.na(core_list)] <- 1
-core_wide <- spread(core_list, plant, color)
-write.csv(core_wide, '~/Desktop/figure/core_taxa_fasta.csv')
+# sw_color$plant <- 'sw16'
+# colnames(sw_color)[1] <-'memb'
+# sw_color <- sw_color[,-c(1,3)]
+# 
+# sw17_color$plant <- 'sw17'
+# colnames(sw17_color)[1] <-'memb'
+# sw17_color <- sw17_color[,-c(1,3)]
+# 
+# misc_color$plant <- 'misc'
+# colnames(misc_color)[1] <-'memb'
+# misc_color <- misc_color[,-c(1,3)]
+# 
+# library(tidyr)
+# core_list <- rbind(sw_color, sw17_color, misc_color)
+# core_list[is.na(core_list)] <- 1
+# core_wide <- spread(core_list, plant, color)
+# write.csv(core_wide, '~/Desktop/figure/core_taxa_fasta.csv')
 
 misc_core_abundance <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_rare) %>% 
   gather(sequence_name, abun, -otu) %>%  
@@ -1082,7 +1082,7 @@ rel_abun_matrix_sw17 <- na.omit(rel_abun_matrix_sw17)
 data_subset_s17 <- t(apply(rel_abun_matrix_sw17[rowSums(rel_abun_matrix_sw17)>0,], 1, cal_z_score))
 my_sample_row <- data.frame(membership = rep('other', length(rownames(rel_abun_matrix_sw17))))
 my_sample_row$membership <- as.character(my_sample_row$membership)
-my_sample_row$membership[rownames(rel_abun_matrix_sw17) %in% unique(sw17_color$otu)] <- 'core'
+my_sample_row$membership[rownames(rel_abun_matrix_sw17) %in% unique(sw17_clusters$otu)] <- 'core'
 rownames(my_sample_row) <- rownames(rel_abun_matrix_sw17)
 s17_heatmap <- pheatmap(data_subset_s17[1:50,], annotation_row = my_sample_row, cluster_rows = F, cluster_cols = F)
 
@@ -1094,7 +1094,7 @@ rel_abun_matrix_sw <- na.omit(rel_abun_matrix_sw)
 data_subset_s16 <- t(apply(rel_abun_matrix_sw[rowSums(rel_abun_matrix_sw)>0,], 1, cal_z_score))
 my_sample_row <- data.frame(membership = rep('other', length(rownames(data_subset_s16))))
 my_sample_row$membership <- as.character(my_sample_row$membership)
-my_sample_row$membership[rownames(data_subset_s16) %in% unique(sw_color$otu)] <- 'core'
+my_sample_row$membership[rownames(data_subset_s16) %in% unique(sw16_clusters$otu)] <- 'core'
 rownames(my_sample_row) <- rownames(data_subset_s16)
 s16_heatmap <- pheatmap(data_subset_s16[1:50,], cluster_rows = F, cluster_cols = F,  annotation_row = my_sample_row)
 
@@ -1105,7 +1105,7 @@ rel_abun_matrix_misc <- na.omit(rel_abun_matrix_misc)
 data_subset_misc <- t(apply(rel_abun_matrix_misc[rowSums(rel_abun_matrix_misc)>0,], 1, cal_z_score))
 my_sample_row <- data.frame(membership = rep('other', length(rownames(data_subset_misc))))
 my_sample_row$membership <- as.character(my_sample_row$membership)
-my_sample_row$membership[rownames(data_subset_misc) %in% unique(misc_color$otu)] <- 'core'
+my_sample_row$membership[rownames(data_subset_misc) %in% unique(misc_clusters$otu)] <- 'core'
 rownames(my_sample_row) <- rownames(data_subset_misc)
 misc_heatmap <- pheatmap(data_subset_misc[1:50,], cluster_rows = F, cluster_cols = F, annotation_row = my_sample_row)
 
