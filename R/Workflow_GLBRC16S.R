@@ -809,23 +809,6 @@ misc_clusters$stage[misc_clusters$memb_misc==6] <- 'late'
 misc_clusters$stage[misc_clusters$memb_misc==7] <- 'early'
 misc_clusters$stage[misc_clusters$memb_misc==8] <- 'early'
 
-# sw_color$plant <- 'sw16'
-# colnames(sw_color)[1] <-'memb'
-# sw_color <- sw_color[,-c(1,3)]
-# 
-# sw17_color$plant <- 'sw17'
-# colnames(sw17_color)[1] <-'memb'
-# sw17_color <- sw17_color[,-c(1,3)]
-# 
-# misc_color$plant <- 'misc'
-# colnames(misc_color)[1] <-'memb'
-# misc_color <- misc_color[,-c(1,3)]
-# 
-# library(tidyr)
-# core_list <- rbind(sw_color, sw17_color, misc_color)
-# core_list[is.na(core_list)] <- 1
-# core_wide <- spread(core_list, plant, color)
-# write.csv(core_wide, '~/Desktop/figure/core_taxa_fasta.csv')
 
 misc_core_abundance <- data.frame(otu = as.factor(row.names(rel_otu_rare)), rel_otu_rare) %>% 
   gather(sequence_name, abun, -otu) %>%  
