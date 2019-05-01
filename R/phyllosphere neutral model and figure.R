@@ -34,10 +34,13 @@ otus <- data.frame(otu = row.names(otus), otus) %>%
 #G5R4_MAIN_12SEP2016_LD2
 otus_unrarefied <- filter(otus_unrarefied, !sample %in% c('G5R3_NF_09MAY2016_LD2', 'G5R3_NF_09MAY2016_LD2'))
 otus <- filter(otus, !sample %in% c('G5R3_NF_09MAY2016_LD2', 'G5R3_NF_09MAY2016_LD2'))
-meta <- filter(meta_all, sample %in% otus$sample)
+meta <- filter(meta, sample %in% otus$sample | sample %in% otus_unrarefied$sample)
 
 #load cores from Nejc
-cores <- read.csv('InputFiles\\core_taxa.csv', stringsAsFactors = FALSE)
+cores <- read.csv('InputFiles\\core_list.csv', stringsAsFactors = FALSE)
+
+#do you want to re-run simulations or use last saved run?
+recalculate <- FALSE
 
 #create soil pool -- all samples combined over both years
 soilpool <- otus_unrarefied %>% 
@@ -101,7 +104,7 @@ imm_abun <- median(imms$abun)
 #importantly, all otu zeroes are included
 #the null model will work on a per plot per sample basis
 #takes 10 minutes because lazy coding...
-if (TRUE) {
+if (recalculate) {
   abun_shifts <- otus %>%
     left_join(meta, by = "sample") %>%
     filter(source == 'phyllosphere') %>%
@@ -164,7 +167,7 @@ comms <- comms %>%
 # 4) append and loop over until all dates/plots are simulated
 
 #for each community-plot
-if (TRUE) {
+if (recalculate) {
   for(i in 1:length(comms)) {
   
     #print progress
@@ -362,16 +365,16 @@ relabun <- j %>%
   spread(group, relabun) %>%
   mutate(
     plant_relabun = (miscanthus_relabun + switchgrass_relabun) / 2,
-    mcore = otu %in% cores$OTU[cores$plant == 'm16'],
-    score = otu %in% cores$OTU[cores$plant != 'm16']) %>%
+    mcore = otu %in% cores$OTU[cores$plant_year == 'misc16'],
+    score = otu %in% cores$OTU[cores$plant_year != 'misc16']) %>%
   select(-plant_relabun) %>%
   rename(miscanthus = miscanthus_relabun, switchgrass = switchgrass_relabun) %>%
   gather(sp, relabun, miscanthus, switchgrass)
 
 p3 <- ggplot(relabun, aes(x = soil_relabun, y = relabun)) +
   geom_point(alpha = 0.2, size = 1) +
-  geom_point(data = filter(relabun, score), shape = 21, fill = '#A3CD57', size = 2) +
-  geom_point(data = filter(relabun, mcore), shape = 21, fill = '#026400', size = 2) +
+  geom_point(data = filter(relabun, score & sp == 'switchgrass'), shape = 21, fill = '#A3CD57', size = 2) +
+  geom_point(data = filter(relabun, mcore & sp == 'miscanthus'), shape = 21, fill = '#026400', size = 2) +
   geom_point(data = filter(relabun, score & mcore), shape = 21, fill = '#A3CD57') +
   geom_point(aes(y = soil_relabun, x = relabun), alpha = 0) + 
   geom_abline(slope = 1, lty = 3) +
