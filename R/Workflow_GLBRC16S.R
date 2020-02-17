@@ -2,16 +2,16 @@
 ### Start Common
 ### DIRECTIONS, SET WORKING DIRECTORY TO "PAPER_GradySorensenStopnisek_InPrep/R"
 ### Before working on Analysis, run the entire Common block of Code (all the way until "### End Common")
+setwd("~/Documents/Github/PAPER_GradySorensenStopnisek_NatComm_2019")
 library(dplyr)
 library(tidyr)
 library(reshape2)
 library(RSQLite)
 library(stringr)
-# Read in OTU table
-otu <- read.table("R/InputFiles/table_combined_merged_trimmed_otus.txt",sep="\t", header=TRUE, stringsAsFactors = FALSE, row.names=1)
 
-#Preping the environmental metadata
-glbrc <- dbConnect(SQLite(), dbname="R/InputFiles/GLBRC_bioenergy_db.db" )
+
+# Preping the environmental metadata
+glbrc <- dbConnect(RSQLite::SQLite(), "R/InputFiles/GLBRC_bioenergy_db.db" )
 
 #Content of the DB
 dbListTables(glbrc)
@@ -21,6 +21,7 @@ dbListFields(glbrc, 'plant')
 dbListFields(glbrc, 'sequencing')
 dbListFields(glbrc, 'soil')
 dbListFields(glbrc, 'nucleic_acids')
+dbListFieldss(glbrc, 'plot')
 
 #get tables into R
 glbrc_NA <- dbGetQuery(glbrc, "select * from nucleic_acids") 
@@ -33,60 +34,36 @@ glbrc_sequncing <- glbrc_sequncing %>%
   mutate(nucleic_acid_name = str_trim(glbrc_sequncing$nucleic_acid_name, side = "both"))
 
 #joining tables to create complete map file
-metadata <- full_join(glbrc_plot, glbrc_sampling, by='plotID')
+metadata <- full_join(glbrc_sampling, glbrc_plot, by='plotID')
 metadata <- full_join(metadata, glbrc_soil, by='sampleID')
 metadata <- full_join(metadata, glbrc_plant, by='sampleID')
 metadata <- full_join(metadata, glbrc_NA, by='sampleID')
 metadata <- full_join(metadata, glbrc_sequncing, by='nucleic_acid_name')
 
-unique(metadata$nucleic_acid_name)
-map <- metadata
-dim(map)
+map_full <- metadata
 
-map_16 <- subset(map, map$primers == 'EMP V4')
-dim(map_16)
-head(map_16)
-map_16$help_name = as.character(lapply(strsplit(as.character(map_16$nucleic_acid_name), split="D"), "[", 1))
-unique(map_16$help_name)
-
-#finding duplicates
-n_occur <- data.frame(table(map_16$help_name))
-n_occur[n_occur$Freq > 1,]
-duplicate_df <- map_16[map_16$help_name %in% n_occur$Var1[n_occur$Freq > 1],]
-list_dupli <- duplicate_df$sequence_name #list of duplicate samples
-
-D1 <- duplicate_df[grep('D1', duplicate_df$sequence_name),]
-D1$removing <- 'remove'
-dim(D1)
-
-map_full <- full_join(map, D1) 
-
-#creating numeric time column
-map_full$sampling_date <- paste0(map_full$month,'-', map_full$day,'-',map_full$year) 
+# #creating numeric time column
+map_full$sampling_date <- paste0(map_full$month,'-', map_full$day,'-',map_full$year)
 map_full$sampling_date <- as.POSIXct(map_full$sampling_date, format='%m-%d-%Y')
 time <- as.POSIXct(map_full$sampling_date, format='%m-%d-%Y')
 time_numeric <- as.numeric(time)
 map_time <- cbind(map_full, time_numeric)
 
 #adding weather data
-weather <- read.csv('R/InputFiles/kbs_weather_09212017.csv', encoding = 'UTF-8', na.strings= c("NA", " ", ""))
+weather <- read.csv("R/InputFiles/kbs_weather_09212017.csv", encoding = 'UTF-8')
 dim(weather)
 head(weather)
 weather$sampling_date <- as.POSIXct(weather$date, format='%d.%m.%y')
 
-sub_weather <- weather[weather$sampling_date %in% map_time$sampling_date,] #subsetting weather file for sample dates
+#subsetting weather file for sample dates
+sub_weather <- weather[weather$sampling_date %in% map_time$sampling_date,] 
 
 #merging dataframes - map file and weather
 map_complete <- full_join(map_time, weather)
 
 #Subset to 16S Samples
-map_16S <- subset(map_complete, map_complete$primers=="EMP V4")
-# Get the name of the samples we have data for
-# Remove any duplicates that we don't want to use
-map_small <- map_16S[map_16S$exclude_from_analysis=="N",]
-
-#map_small_v1 <- subset(map_16S_small, map_16S_small$removing == 'remove') 
-#map_small <- map_16S_small[!(rownames(map_16S_small) %in% c(33,108, 185,259,37,418,467,487,571)),]
+map_16S <- subset(map_complete, sequencing_type == "Illumina 16S iTag", map_complete$exclude_from_analysis == "N" )
+            
 
 samples <- colnames(otu)
 # put taxonomy into its own variable
