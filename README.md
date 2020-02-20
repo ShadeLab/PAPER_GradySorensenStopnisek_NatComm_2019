@@ -6,7 +6,7 @@
 <i> This work is published </i>
 
 ### Data
-The raw data for this study are available in the Joint Genomes Institute Genome Portal (https://genome.jgi.doe.gov/portal/ Project ID 1139694) with projects designated by year and sample type
+The raw data for this study are available in the Joint Genomes Institute Genome Portal (https://genome.jgi.doe.gov/portal/ Project ID [1139694](https://genome.jgi.doe.gov/portal/SwiandphylliTags_FD/SwiandphylliTags_FD.info.html)) with projects designated by year and sample type
 
 
 ### To cite this work or code
