@@ -35,18 +35,19 @@ usearch64 -unoise3 uniques_combined_merged_trimmed.fastq -zotus combined_merged_
 ```
 ## Map reads at 97% to 97% OTUs
 ```
-usearch64 -otutab merged_trimmed_pairs/combined_merged_trimmed.fastq -otus Traditional_OTU/combined_merged_otus.fa -uc map_combined_merged_otus.uc -otutabout table_combined_merged_trimmed_otus.txt -biomout table_combined_merged_trimmed_otus.biom -notmatchedfq unmapped_combined_merged_trimmed.fq
+usearch64 -otutab merged_trimmed_pairs/combined_merged_trimmed.fastq -otus combined_merged_otus.fa -uc map_combined_merged_otus.uc -otutabout table_combined_merged_trimmed_otus.txt -biomout table_combined_merged_trimmed_otus.biom -notmatchedfq unmapped_combined_merged_trimmed.fq
 ```
 ## Map reads at 97% to ZOTUs
 ```
-usearch64 -otutab merged_trimmed_pairs/combined_merged_trimmed.fastq -otus Zero_OTU/combined_merged_zotus.fa -uc map_combined_merged_ZOTUs.uc -otutabout table_combined_merged_trimmed_ZOTUs.txt -biomout table_combined_merged_trimmed_ZOTUs.biom -notmatchedfq unmapped_combined_merged_ZOTUs.fq
+usearch64 -otutab merged_trimmed_pairs/combined_merged_trimmed.fastq -otus combined_merged_zotus.fa -uc map_combined_merged_ZOTUs.uc -otutabout table_combined_merged_trimmed_ZOTUs.txt -biomout table_combined_merged_trimmed_ZOTUs.biom -notmatchedfq unmapped_combined_merged_ZOTUs.fq
 ```
 
 ## Classify 97% OTUs using sintax and Silva123
 ```
-usearch64 -singtax Traditional_OTU/combined_merged_otus.fa -db silva_16S_v123.fa -tabbedout Traditional_OTU/combined_merged_both_runs_otus_taxonomy.sintax -strand both
+usearch64 -sintax combined_merged_otus.fa -db silva_16s_v123.fa -tabbedout combined_merged_both_runs_otus_taxonomy.sintax -strand both
+
 ```
 ## Classify ZOTUs using sintax and silva 123
 ```
-usearch64 -sintax Zero_OTU/combined_merged_zotus.fa -db silva_16s_v123.fa -tabbedout Zero_OTU/taxonomy_combined_merged_ZOTUs.sintax -strand both
+usearch64 -sintax combined_merged_zotus.fa -db silva_16s_v123.fa -tabbedout Zero_OTU/taxonomy_combined_merged_ZOTUs.sintax -strand both
 ```
