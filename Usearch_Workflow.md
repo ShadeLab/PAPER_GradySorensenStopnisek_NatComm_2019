@@ -44,7 +44,7 @@ usearch64 -otutab merged_trimmed_pairs/combined_merged_trimmed.fastq -otus Zero_
 
 ## Classify 97% OTUs using sintax and Silva123
 ```
-usearch64 -singtax Traditional_OTU/combined_merged_otus.fa -db silva_16S_v123.fa -tabbedout Traditional_OTU/combined_merged_both_runs_otus_taxonomy.sintax -strand both"
+usearch64 -singtax Traditional_OTU/combined_merged_otus.fa -db silva_16S_v123.fa -tabbedout Traditional_OTU/combined_merged_both_runs_otus_taxonomy.sintax -strand both
 ```
 ## Classify ZOTUs using sintax and silva 123
 ```
